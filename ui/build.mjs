@@ -13,6 +13,9 @@ const ajv = new Ajv2020({ strict: false, code: { source: true, esm: true } });
 await writeFile(path.join(generated, 'validate-workspace.mjs'), standaloneCode(ajv, ajv.compile(schema)));
 const summarySchema = JSON.parse(await readFile(path.join(root, 'schemas/host-summary.schema.json'), 'utf8'));
 await writeFile(path.join(generated, 'validate-host-summary.mjs'), standaloneCode(ajv, ajv.compile(summarySchema)));
+const discoverySchema = JSON.parse(await readFile(path.join(root, 'schemas/discovery-state.schema.json'), 'utf8'));
+await writeFile(path.join(generated, 'validate-discovery-state.mjs'), standaloneCode(ajv, ajv.compile(discoverySchema)));
+await build({ entryPoints: [path.join(generated, 'validate-discovery-state.mjs')], outfile: path.join(generated, 'validate-discovery-state.mjs'), allowOverwrite: true, bundle: true, format: 'esm', platform: 'browser', target: 'es2022' });
 const bundled = await build({ absWorkingDir: root, metafile: true, entryPoints: [path.join(root, 'ui/app.mjs')], bundle: true, write: false, minify: true, format: 'esm', platform: 'browser', target: 'es2022', legalComments: 'inline' });
 const template = await readFile(path.join(root, 'ui/index.html'), 'utf8');
 const css = await readFile(path.join(root, 'ui/styles.css'), 'utf8');
@@ -23,11 +26,14 @@ const serverBundle = await build({ absWorkingDir: root, metafile: true, entryPoi
   bundle: true, minify: true, format: 'esm', platform: 'node', target: 'node22',
   banner: { js: 'import { createRequire as __coreliftCreateRequire } from "node:module"; const require = __coreliftCreateRequire(import.meta.url);' },
   legalComments: 'inline' });
+const previewBundle = await build({ absWorkingDir: root, metafile: true, entryPoints: [path.join(root, 'ui/preview.mjs')], outfile: path.join(generated, 'preview.mjs'),
+  bundle: true, minify: true, format: 'esm', platform: 'node', target: 'node22',
+  banner: { js: 'import { createRequire as __coreliftCreateRequire } from "node:module"; const require = __coreliftCreateRequire(import.meta.url);' }, legalComments: 'inline' });
 console.log(`Built self-contained MCP App resource (${Buffer.byteLength(html)} bytes).`);
 
 // Preserve full upstream licenses for every dependency actually included by esbuild.
 const packageRoots = new Set();
-for (const input of [...Object.keys(bundled.metafile.inputs), ...Object.keys(serverBundle.metafile.inputs)]) {
+for (const input of [...Object.keys(bundled.metafile.inputs), ...Object.keys(serverBundle.metafile.inputs), ...Object.keys(previewBundle.metafile.inputs)]) {
   if (!input.includes('node_modules/')) continue;
   let directory = path.dirname(path.resolve(root, input));
   while (directory.startsWith(path.join(root, 'node_modules'))) {

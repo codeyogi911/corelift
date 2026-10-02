@@ -38,7 +38,7 @@ def build(destination, root=ROOT, with_ui=False):
     files = package_files(root)
     if (root / "plugin.json").is_symlink():
         raise ValueError("symlink manifest refused")
-    ui_files = [root / "ui/generated/server.mjs", root / "ui/generated/workspace.html", root / "ui/codex-mcp.json", root / "ui/generated/THIRD_PARTY_NOTICES.txt", root / "ui/generated/bundle-licenses.json"] if with_ui else []
+    ui_files = [root / "ui/generated/server.mjs", root / "ui/generated/preview.mjs", root / "ui/generated/workspace.html", root / "ui/codex-mcp.json", root / "ui/generated/THIRD_PARTY_NOTICES.txt", root / "ui/generated/bundle-licenses.json"] if with_ui else []
     for p in ui_files:
         if not p.is_file() or p.is_symlink() or not p.resolve().is_relative_to(root.resolve()):
             raise ValueError("build the contained UI artifacts before --with-ui")
@@ -77,7 +77,7 @@ def build(destination, root=ROOT, with_ui=False):
             "The source repository README provides the full development/test workflow. See LICENSE, NOTICE and THIRD_PARTY.md for licensing.\n")
         if host == "codex" and with_ui:
             with (package / "README.md").open("a") as readme:
-                readme.write("\nThis optional package includes a real read-only stdio MCP workspace and root `mcp.json`. Requires Node 22+ and Python 3.11+. No npm install is needed in this built package. The server accepts empty input and serves a bundled UI resource. The public synthetic demo remains complete. Imported reports withhold contents and counts unless separate startup consent enables exactly three aggregate counts; full details stay in the local CLI/preview. See docs/privacy-boundary.md. Codex global sidebar acceptance is unverified. See `docs/workspace.md` for scope and fallback.\n")
+                readme.write("\nThis optional package includes a real read-only stdio MCP workspace and root `mcp.json`. Requires Node 22+ and Python 3.11+. No npm install is needed in this built package. The server accepts empty input and serves a bundled UI resource. The public synthetic demo remains complete and includes guided fictional connection discovery. Run node ui/generated/preview.mjs for the separate local preview; real sign-in remains unavailable until a supported provider is bound. Imported reports withhold contents and counts unless separate startup consent enables exactly three aggregate counts; full details stay in the local CLI/preview. See docs/privacy-boundary.md. Codex global sidebar acceptance is unverified. See `docs/workspace.md` for scope and fallback.\n")
     return destination
 
 

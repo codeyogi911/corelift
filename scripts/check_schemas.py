@@ -29,6 +29,9 @@ def main():
         Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(value)
         validate(value, schema)
+    for name in ("discovery-event", "discovery-state"):
+        Draft202012Validator.check_schema(load(ROOT / "schemas" / f"{name}.schema.json"))
+    Draft202012Validator(load(ROOT / "schemas/discovery-event.schema.json")).validate({"action": "create"})
     official = ROOT / "evidence/agent-plugins-1.0.0.schema.json"
     expected = (ROOT / "evidence/agent-plugins-1.0.0.sha256").read_text().strip()
     assert hashlib.sha256(official.read_bytes()).hexdigest() == expected, "official schema checksum changed"
@@ -38,7 +41,7 @@ def main():
     assert hashlib.sha256(official_mcp.read_bytes()).hexdigest() == official_mcp.with_suffix(".sha256").read_text().strip()
     Draft202012Validator.check_schema(load(official_mcp))
     Draft202012Validator(load(official_mcp)).validate(load(ROOT / "ui/codex-mcp.json"))
-    print("PASS: six contracts, portable manifest and optional MCP config match JSON Schema 2020-12; official schema checksums verified")
+    print("PASS: six data contracts plus two discovery schemas, portable manifest and optional MCP config match JSON Schema 2020-12; official schema checksums verified")
 
 
 if __name__ == "__main__":

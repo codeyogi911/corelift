@@ -5,14 +5,16 @@ import { readFile } from 'node:fs/promises';
 import { loadSnapshot, hostResultFor, validateWorkspace } from '../shared.mjs';
 import validateHostSummary from '../generated/validate-host-summary.mjs';
 import * as presentation from '../presentation.mjs';
+import { createDiscoveryController, discoveryView } from '../discovery-view.mjs';
 
 // Minimal DOM seam checks real rendering/state transitions, not visual appearance.
 class Element {
   constructor(text = '') { this.text = text; this.children = []; this.attributes = {}; }
   setAttribute(k, v) { this.attributes[k] = v; }
-  append(child) { this.children.push(child); }
+  append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
   addEventListener() {}
+  focus() {}
   get textContent() { return this.text + this.children.map(c => c.textContent).join(' '); }
 }
 async function harness(preview = false, localResult) {
@@ -25,14 +27,15 @@ async function harness(preview = false, localResult) {
     close() {}
   }
   const source = (await readFile(new URL('../app.mjs', import.meta.url), 'utf8')).replace(/^import .*;\n/gm, '');
-  const context = { ...presentation, App, applyHostStyleVariables() {}, validateWorkspace, validateHostSummary,
+  const context = { ...presentation, createDiscoveryController, discoveryView, App, applyHostStyleVariables() {}, validateWorkspace, validateHostSummary,
     Node: Element, document: { querySelector: () => root, documentElement: { dataset: { preview: String(preview) } }, createElement: () => new Element(), createTextNode: text => new Element(text) },
     window: { parent: {}, addEventListener() {} }, matchMedia: () => ({ matches: false }),
     setTimeout: (...args) => { const id = setTimeout(...args); timers.push(id); return id; }, clearTimeout,
     AbortSignal, fetch: async () => ({ ok: true, json: async () => localResult }) };
-  vm.runInNewContext(source, context);
+  vm.createContext(context);
+  vm.runInContext(source, context);
   await new Promise(resolve => setImmediate(resolve));
-  return { root, send: value => bridge.ontoolresult(value), close: () => timers.forEach(clearTimeout) };
+  return { root, evaluate: expression => vm.runInContext(expression, context), send: value => bridge.ontoolresult(value), close: () => { vm.runInContext('discovery.close()', context); timers.forEach(clearTimeout); } };
 }
 
 test('host disclosure view clears demo details, supports both summary modes and refuses full imports', async () => {
@@ -64,5 +67,29 @@ test('local preview retains imported details and clearly distinguishes host disc
   try {
     assert.match(h.root.textContent, /ERP_PURCHASING/);
     assert.match(h.root.textContent, /Full report visible in this local preview/);
+  } finally { h.close(); }
+});
+
+
+test('host Connections guide is useful, purely fictional and leaves imports withheld', async () => {
+  const h = await harness();
+  try {
+    const snapshot = JSON.parse(await loadSnapshot());
+    h.send({ structuredContent: snapshot });
+    h.evaluate("changeView('connections')");
+    assert.match(h.root.textContent, /Try guided demo/);
+    assert.match(h.root.textContent, /private locators are not sent through MCP/);
+    await h.evaluate("discovery.send({action:'prepare',scenario:'success'})");
+    assert.match(h.root.textContent, /Simulate sign-in/);
+    await h.evaluate("discovery.send({action:'start'})");
+    await new Promise(resolve => setTimeout(resolve, 900));
+    assert.match(h.root.textContent, /Simulated discovery complete/);
+    assert.match(h.root.textContent, /Request notes/);
+    await h.evaluate("discovery.send({action:'select',application_id:'Z_REQUEST_NOTES'})");
+    assert.match(h.root.textContent, /Selected for the next assessment/);
+    snapshot.mode = 'imported'; snapshot.rehearsal = null;
+    h.send(hostResultFor(JSON.stringify(snapshot)));
+    assert.match(h.root.textContent, /Contents withheld/);
+    assert.doesNotMatch(h.root.textContent, /Request notes|Fictional DEV/);
   } finally { h.close(); }
 });

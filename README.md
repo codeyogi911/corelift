@@ -39,7 +39,7 @@ npm run build:ui
 npm run preview
 ```
 
-Open `http://127.0.0.1:4173/` for the synthetic assessment. The read-only workspace shows connections, applications, clean-core findings, migration stages and verification. Stop with Ctrl-C. Use `npm run preview -- --assessment /absolute/path/assessment.json` to inspect an explicitly selected local report. Imported assertions stay distinct from actual demo checks. MCP imports withhold contents and counts by default; a separate startup choice permits only three counts. Full imported details remain in the local CLI/preview. See [what each action sends to the host](docs/privacy-boundary.md); local stdio does not guarantee local-only host processing.
+Open `http://127.0.0.1:4173/` for the synthetic assessment. The read-only workspace shows connections, applications, clean-core findings, migration stages and verification. In Connections, try the guided simulation: sign in with fictional data, discover metadata automatically and choose a representative app. [Discovery scope and current limits](docs/guided-discovery.md). Stop with Ctrl-C. Use `npm run preview -- --assessment /absolute/path/assessment.json` to inspect an explicitly selected local report. Imported assertions stay distinct from actual demo checks. MCP imports withhold contents and counts by default; a separate startup choice permits only three counts. Full imported details remain in the local CLI/preview. See [what each action sends to the host](docs/privacy-boundary.md); local stdio does not guarantee local-only host processing.
 
 See [workspace setup and Codex package](docs/workspace.md). The actual global-entrypoint tool and MCP App resource are protocol-tested; Codex sidebar acceptance remains unverified.
 
