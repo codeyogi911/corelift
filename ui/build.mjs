@@ -11,6 +11,8 @@ await mkdir(generated, { recursive: true });
 const schema = JSON.parse(await readFile(path.join(root, 'schemas/workspace.schema.json'), 'utf8'));
 const ajv = new Ajv2020({ strict: false, code: { source: true, esm: true } });
 await writeFile(path.join(generated, 'validate-workspace.mjs'), standaloneCode(ajv, ajv.compile(schema)));
+const summarySchema = JSON.parse(await readFile(path.join(root, 'schemas/host-summary.schema.json'), 'utf8'));
+await writeFile(path.join(generated, 'validate-host-summary.mjs'), standaloneCode(ajv, ajv.compile(summarySchema)));
 const bundled = await build({ absWorkingDir: root, metafile: true, entryPoints: [path.join(root, 'ui/app.mjs')], bundle: true, write: false, minify: true, format: 'esm', platform: 'browser', target: 'es2022', legalComments: 'inline' });
 const template = await readFile(path.join(root, 'ui/index.html'), 'utf8');
 const css = await readFile(path.join(root, 'ui/styles.css'), 'utf8');

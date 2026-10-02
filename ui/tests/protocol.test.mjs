@@ -64,8 +64,9 @@ test('imported synthetic report remains imported and snapshot is frozen', async 
   try {
     const first = (await client.callTool({ name: TOOL_NAME, arguments: {} })).structuredContent;
     assert.equal(first.mode, 'imported');
-    assert.equal(first.rehearsal, null);
-    assert.match(first.provenance_notice, /assertions/);
+    assert.equal(first.disclosure, 'withheld');
+    assert.equal(first.counts, null);
+    assert.equal(first.assessment, undefined);
     await writeFile(file, '{}');
     assert.deepEqual((await client.callTool({ name: TOOL_NAME, arguments: {} })).structuredContent, first);
   } finally { await close(); await rm(directory, { recursive: true, force: true }); }

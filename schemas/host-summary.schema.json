@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:corelift:host-summary:1.0.0",
+  "title": "CoreLift imported-report host disclosure",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "host_summary_version": {
+          "const": "1.0.0"
+        },
+        "mode": {
+          "const": "imported"
+        },
+        "read_only": {
+          "const": true
+        },
+        "disclosure": {
+          "const": "withheld"
+        },
+        "counts": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "host_summary_version",
+        "mode",
+        "read_only",
+        "disclosure",
+        "counts"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "host_summary_version": {
+          "const": "1.0.0"
+        },
+        "mode": {
+          "const": "imported"
+        },
+        "read_only": {
+          "const": true
+        },
+        "disclosure": {
+          "const": "aggregate-counts"
+        },
+        "counts": {
+          "type": "object",
+          "properties": {
+            "applications": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "applications_with_unknowns": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocked_stages": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "applications",
+            "applications_with_unknowns",
+            "blocked_stages"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "host_summary_version",
+        "mode",
+        "read_only",
+        "disclosure",
+        "counts"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}
