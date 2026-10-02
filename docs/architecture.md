@@ -9,3 +9,7 @@ Host packages contain identical engine/schema/evidence/fixture bytes and one sha
 Future connectors should ingest official ATC/custom-code/usage/interface exports first, then add narrowly supported system reads only after authorization. Next development should prove one genuine SAP API pathway in a test landscape, not general RFC/OData exploration. Before implementation, add version-aware functional capability evidence, standard replacement catalog, full screen/ABAP behavior extraction, and per-operation SAP pathway verification. Customer exports can contain secrets; no automated detector guarantees their absence. Keep them local, minimized and excluded from Git.
 
 Plans cover discovery, assessment, design, build, data migration, deployment, checkpoint, cutover, verification and rollback. Later stages are visibly blocked because providers are absent. CoreLift creates no BTP resources and makes no live SAP, compilation or compliance claims.
+
+## Guided connection discovery
+
+The [guided discovery flow](guided-discovery.md) keeps preview sessions separate from assessment evidence. A strict event contract drives a deterministic simulator; only the provider creates observations. The host retains the imported-report disclosure boundary and exposes no connection/authentication mutation tool. A real SAP adapter is not yet implemented.

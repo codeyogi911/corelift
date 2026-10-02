@@ -1,3 +1,4 @@
+import { createDiscoveryController, discoveryView } from './discovery-view.mjs';
 import { App, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 import validateWorkspace from './generated/validate-workspace.mjs';
 import validateHostSummary from './generated/validate-host-summary.mjs';
@@ -7,6 +8,8 @@ const root = document.querySelector('#root');
 const preview = document.documentElement.dataset.preview === 'true';
 const state = { view: 'applications', selected: null, search: '', data: null, summary: null, loading: true, error: '', status: '', bridge: null, capabilities: {} };
 let initialTimer;
+const discovery = createDiscoveryController({ preview, onChange: () => { if (state.data && state.view === 'connections') render(); } });
+window.addEventListener('pagehide', () => discovery.close(), { once: true });
 
 // Export content is always a text node; no innerHTML, Markdown or template parsing.
 function el(tag, attributes = {}, ...children) {
@@ -103,7 +106,7 @@ function applications() {
 }
 function connections() {
   const a = state.data.assessment;
-  return el('div', { class: 'stack' }, el('div', { class: 'surface' }, el('h2', {}, 'Assessment source'),
+  return el('div', { class: 'stack' }, discoveryView({ el, button, tag, controller: discovery, preview }), el('div', { class: 'surface' }, el('h2', {}, 'Assessment source'),
     el('p', { class: 'small-note' }, state.data.label),
     el('dl', {}, el('dt', {}, 'Current source'), el('dd', {}, profile(a.source_system)), el('dt', {}, 'Future target'), el('dd', {}, profile(a.target)),
       el('dt', {}, 'Snapshot'), el('dd', { class: 'mono' }, state.data.snapshot_hash), el('dt', {}, 'API revision'), el('dd', { class: 'mono' }, a.run_record.api_snapshot_revision)),
@@ -230,7 +233,7 @@ if (preview) {
 } else if (window.parent === window) {
   state.loading = false; state.error = 'This MCP resource needs a supported host. Start the separate local preview to inspect it in a browser.'; render();
 } else {
-  const app = new App({ name: 'CoreLift workspace', version: '0.3.0' }, {});
+  const app = new App({ name: 'CoreLift workspace', version: '0.4.0' }, {});
   state.bridge = app;
   app.ontoolresult = result => { try { acceptResult(result); } catch (error) { state.loading = false; state.error = error.message; render(); } };
   app.onhostcontextchanged = hostContext;

@@ -53,3 +53,13 @@ Verified locally on 2026-10-02 with Node 23.6.0 and Python 3.14.4. This update i
 - Independent source review exercised actual stdio responses with planted filename, identifier, reason and source-title markers. It found no concrete disclosure or correctness blocker. Generated/package regressions also pass in the primary test run.
 
 See [the exact data-flow contract](privacy-boundary.md). The boundary covers CoreLift MCP responses, not independent host filesystem, CLI output, browser/screenshot access or retention. All test material is synthetic. No SAP access, ATC run, monitoring, customer upload or deployment occurred.
+
+## Guided discovery simulation, workspace 0.4.0
+
+Implemented after independent boundary-design review. The preview uses authoritative Node sessions and the host UI uses a separate fictional simulation; neither implements SAP authentication or network discovery. The initial user input is a locator, not a release/access questionnaire. Observations are explicitly simulated or unknown, and application selection creates only a local scope.
+
+Local verification covers 41 Node tests and 41 Python tests, six assessment/privacy data contracts plus two discovery schemas, portable/MCP manifests, source/package checks and bundled dependency notices. New cases cover the complete simulated flow, partial metadata, failed/interrupted sign-in, unreachable/identity/permission failures, repeated/cancelled connections, forged completion events, stale callbacks, session isolation/count/idle expiry, HTTP Origin/Host/JSON/stream size/deadline limits, SSRF-shaped locator refusal, no locator network access, private-marker absence from MCP responses, and a relocated standalone preview package. No new browser pixel check or actual host lifecycle acceptance is claimed.
+
+Independent code review caught and confirmed fixes for four lifecycle problems: idle sessions not expiring without a subsequent request, expired-session stale details/no recovery, cancellation racing a provider revision, and out-of-order initial session responses replacing a newer connection. Deterministic regressions cover each. The reviewer reran all 16 discovery tests and the broader non-loopback suite and found no remaining concrete blocker in the simulator scope. Loopback/package checks were exercised by the primary test run.
+
+The live adapter, exact supported SAP operations and provider-owned secure sign-in remain future work requiring the user's locator and approved read scope. DNS/IP/TLS/redirect enforcement is documented as an adapter requirement, not represented as implemented by this simulator. Installed plugins, local marketplace configuration and Codex processes were not changed.

@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:corelift:discovery-state:1.0.0",
+  "type": "object",
+  "properties": {
+    "discovery_version": {
+      "const": "1.0.0"
+    },
+    "read_only": {
+      "const": true
+    },
+    "environment": {
+      "const": "development"
+    },
+    "environment_verification": {
+      "const": "user-declared"
+    },
+    "mode": {
+      "enum": [
+        "simulation",
+        "unconfigured"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "idle",
+        "scope-review",
+        "authenticating",
+        "discovering",
+        "ready",
+        "scoped",
+        "cancelled",
+        "provider-unavailable",
+        "saved-unavailable",
+        "auth-failed",
+        "auth-interrupted",
+        "unreachable",
+        "identity-mismatch",
+        "least-privilege"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "notice": {
+      "type": "string",
+      "maxLength": 600
+    },
+    "facts": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "enum": [
+              "server-identity",
+              "product",
+              "release",
+              "fps",
+              "abap-platform"
+            ]
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "status": {
+            "enum": [
+              "simulated-observed",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "system-metadata",
+              "capability-catalog",
+              "application-candidates",
+              "existing-atc-findings"
+            ]
+          },
+          "status": {
+            "enum": [
+              "simulated-available",
+              "unknown"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "applications": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "status": {
+            "const": "simulated"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "reason",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "selected_application": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 80
+    },
+    "permitted_scope": {
+      "const": [
+        "system-metadata",
+        "capability-catalog",
+        "application-candidates"
+      ]
+    }
+  },
+  "required": [
+    "discovery_version",
+    "read_only",
+    "environment",
+    "environment_verification",
+    "mode",
+    "phase",
+    "revision",
+    "attempt",
+    "notice",
+    "facts",
+    "capabilities",
+    "applications",
+    "selected_application",
+    "permitted_scope"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:corelift:discovery-event:1.0.0",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "status"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "create"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "prepare"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scenario": {
+          "enum": [
+            "success",
+            "partial",
+            "auth-failed",
+            "auth-interrupted",
+            "unreachable",
+            "identity-mismatch",
+            "least-privilege"
+          ]
+        }
+      },
+      "required": [
+        "action",
+        "revision",
+        "scenario"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "locate"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "locator": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "system-url",
+                "saved-connection"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "action",
+        "revision",
+        "locator"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "start"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "retry"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "cancel"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "disconnect"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "select"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      },
+      "required": [
+        "action",
+        "revision",
+        "application_id"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

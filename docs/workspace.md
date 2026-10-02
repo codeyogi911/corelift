@@ -22,6 +22,10 @@ npm run preview -- --assessment /absolute/path/assessment.json
 
 The server freezes one validated snapshot at startup. Reload reads that same snapshot; restart to select another file. Malformed, oversized or unsupported inputs produce an error and never silently fall back to demo. An imported report is always labeled as imported assertions—even if its JSON says `synthetic: true`. The two-note mock rehearsal appears only in bundled demo mode. No independent verification is claimed for imported run records.
 
+## Guided connection discovery
+
+Open Connections → Try guided demo → Simulate sign-in. The agent flow discovers fictional system metadata and suggested applications automatically; select one for a local scope. Failure/cancellation/retry states are testable. The standalone preview accepts only a locator for a future real connection and explains when the provider is unavailable. No credentials or SAP connection are involved. See [the implemented flow and protocol](guided-discovery.md).
+
 ## Optional Codex package
 
 ```sh
@@ -29,9 +33,9 @@ npm run build:ui
 python3 scripts/build_packages.py --with-ui --output dist-workspace
 ```
 
-Choose a fresh output directory. `dist-workspace/codex` contains portable root `plugin.json`, real root `mcp.json`, bundled `ui/generated/server.mjs` and a self-contained MCP App HTML resource. This built package needs Node 22+ and Python 3.11+, without an npm install. The Cursor and Claude packages keep the skills/CLI workflow and contain no MCP UI configuration. The default builder without `--with-ui` still produces skills/CLI packages for all three hosts.
+Choose a fresh output directory. `dist-workspace/codex` contains portable root `plugin.json`, real root `mcp.json`, bundled `ui/generated/server.mjs`, separate `ui/generated/preview.mjs`, and a self-contained MCP App HTML resource. This built package needs Node 22+ and Python 3.11+, without an npm install. The Cursor and Claude packages keep the skills/CLI workflow and contain no MCP UI configuration. The default builder without `--with-ui` still produces skills/CLI packages for all three hosts.
 
-The stdio server exposes one read-only tool, `open_corelift_workspace`, which accepts `{}`. Its tool definition declares `_meta.ui.resourceUri` and `_meta["openai/ui"].entrypoints: [{"type":"global"}]`. The registered `ui://corelift/workspace-v0.3.0` resource has MIME type `text/html;profile=mcp-app`, the official MCP Apps bridge and restrictive CSP metadata. These declarations are protocol-tested. They are not a runtime acceptance claim. No host/global settings, credentials or marketplace entries are changed by the build.
+The stdio server exposes one read-only tool, `open_corelift_workspace`, which accepts `{}`. Its tool definition declares `_meta.ui.resourceUri` and `_meta["openai/ui"].entrypoints: [{"type":"global"}]`. The registered `ui://corelift/workspace-v0.4.0` resource has MIME type `text/html;profile=mcp-app`, the official MCP Apps bridge and restrictive CSP metadata. These declarations are protocol-tested. They are not a runtime acceptance claim. No host/global settings, credentials or marketplace entries are changed by the build.
 
 For a separately authorized host smoke test, use that host's current supported local plugin-loading workflow and select the built Codex package. Confirm entrypoint discovery, primary sidebar placement, initial rendering, theme/size/context updates and reopening; retain text/structured output as fallback. Actual Codex sidebar loading remains unverified. Do not treat local preview success as satisfying this test.
 

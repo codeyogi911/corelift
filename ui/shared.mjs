@@ -7,7 +7,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(moduleDirectory, path.basename(moduleDirectory) === 'generated' ? '../..' : '..');
-export const RESOURCE_URI = 'ui://corelift/workspace-v0.3.0';
+export const RESOURCE_URI = 'ui://corelift/workspace-v0.4.0';
 export const TOOL_NAME = 'open_corelift_workspace';
 export const execFileAsync = promisify(execFile);
 export const schema = JSON.parse(await readFile(path.join(ROOT, 'schemas/workspace.schema.json'), 'utf8'));

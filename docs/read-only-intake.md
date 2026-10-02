@@ -1,19 +1,14 @@
 # First S/4HANA on-premise intake
 
-Design status: proposed next slice, not a live connector. On 2026-10-02 the user reported CoreLift visible in the Codex sidebar. That establishes user-observed discovery only. Opening the resource, correct data rendering, navigation and reopening are still separate checks.
+Design status: live adapter remains unimplemented. The [guided connection simulation](guided-discovery.md) now provides the local interaction flow. On 2026-10-02 the user reported CoreLift visible in the Codex sidebar. That establishes user-observed discovery only. Opening the resource, correct data rendering, navigation and reopening are still separate checks.
 
 ## Smallest useful pilot
 
 Assess one representative custom application in an agreed development or QA system, starting with already available metadata/ATC exports. Confirm the source release and the intended modernization target separately. If only production is available, use owner-provided existing exports first; do not start monitoring, scans or remote discovery as an implicit substitute. The first outcome is an inventory with explicit coverage gaps and a reviewable disposition, not a migration or a successful-connection badge.
 
-Information needed now (no credentials):
+The system is development, as supplied by the user. Ask only for its address or an existing saved connection, then use trusted provider-owned sign-in after the actual access scope is approved. Discover release/FPS, ABAP platform, supported analysis capabilities and representative application metadata automatically wherever supported reads can establish them. Do not ask the user to fill out the former six-part technical questionnaire. Let them select an application from the resulting suggestions. Keep missing facts unknown, with a targeted request only when a supported discovery route cannot establish the fact.
 
-1. Development, QA, sandbox or production; who can authorize metadata reads for the selected system/client.
-2. S/4HANA release, FPS/SPS and SAP_BASIS/ABAP platform version. Unknown is an acceptable intake answer; it blocks release-specific conclusions.
-3. Which access already works: ADT in Eclipse/VS Code, SAP GUI, VPN, existing ATC/Custom Code Migration app results, or existing Cloud Connector. Availability is not permission to use every operation.
-4. One custom app: transaction/app identifier or an approved package/object scope, UI technology and a short business purpose. Start without business rows or customer source code in chat.
-5. Objective: clean-core review at the current release, a separately planned S/4 upgrade, or evaluation of one side-by-side extension. Do not silently turn BTP into the ERP target.
-6. Local retention location/owner and what, if anything, may be shown to the AI host. No customer code upload is part of this pilot.
+The implemented simulation exercises that sequence without credentials or SAP access. A real locator is accepted only in the transient local preview session and reports provider-unavailable. Sign-in, real identity observation and actual capability mapping remain blocked until an approved supported adapter is bound. Local retention and permission to disclose to an AI host remain separate from connection consent.
 
 ## Supported evidence routes
 
@@ -31,7 +26,7 @@ For any future live pathway, verify documented use against the [SAP API Policy](
 
 | Existing code | Missing next boundary |
 | --- | --- |
-| `ui/app.mjs` Connections view is a static status display | A guided intake draft with explicit unknowns, scope summary and reasons a path is unavailable. No Connect button before a provider exists. |
+| Connections now has a guided local simulation and locator draft | Bind a documented live adapter, with trusted sign-in and identity/capability observations. No actual sign-in before that provider exists. |
 | Inventory has source/target product versions | Separate environment class, local system/client alias, SAP_BASIS version, owner, scope and independently observed identity. |
 | `corelift/capabilities.py` permits offline assessment only | Typed named read capabilities, provider/version support, endpoint identity binding, time/object/output limits and backend authorization checks. Approval text must not unlock a missing provider. |
 | CLI accepts manually normalized JSON | A bounded local importer for one real supported export format, preserving original-file hashes, extractor/tool/version, check variant, result timestamp, usage window and missing coverage. Choose the format from an actual approved export. |

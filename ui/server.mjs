@@ -14,7 +14,7 @@ try {
   if (shutdown.signal.aborted) throw new Error("cancelled");
   const html = await resourceHTML();
   if (shutdown.signal.aborted) throw new Error("cancelled");
-  server = new Server({ name: 'corelift-local-workspace', version: '0.3.0' }, {
+  server = new Server({ name: 'corelift-local-workspace', version: '0.4.0' }, {
     capabilities: { tools: {}, resources: {} },
     instructions: 'CoreLift keeps imported assessment details local. The empty-input tool sends fixed disclosure metadata by default, or exactly three aggregate counts only when --share-summary was explicitly set at local startup. No source, identifier, version, filename, hash or evidence detail is sent for imported reports. Bundled demo content is fictional. Imported assertions are unverified. No SAP/BTP connection, write, approval or deployment tools exist. Use structured/text results if this host cannot render MCP Apps.',
   });
