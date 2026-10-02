@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "sources": [
+    {
+      "id": "sap-levels",
+      "title": "SAP clean-core extensibility levels",
+      "url": "https://learning.sap.com/courses/practicing-clean-core-extensibility-for-sap-s-4hana-cloud/explaining-extensibility-model-best-practices_e290f382-800e-40ef-a203-85a13115f487",
+      "checked_at": "2026-10-02",
+      "revision": "living-document; reviewed 2026-10-02; not a target API snapshot",
+      "scope": "Policy only. A released, B classic, C internal, D not recommended; worst dependency governs."
+    },
+    {
+      "id": "sap-cloudification",
+      "title": "SAP Cloudification Repository and ATC",
+      "url": "https://github.com/SAP/abap-atc-cr-cv-s4hc",
+      "checked_at": "2026-10-02",
+      "revision": "living README reviewed 2026-10-02; fixture API records are synthetic",
+      "scope": "Edition/release/FPS and immutable commit must be pinned for customer API evidence; latest is insufficient."
+    },
+    {
+      "id": "sap-api-enablement",
+      "title": "SAP API Enablement Guidelines",
+      "url": "https://www.sap.com/documents/2023/05/b0bd8ae6-747e-0010-bca6-c68f7e60039b.html",
+      "checked_at": "2026-10-02",
+      "revision": "v3 August 2025; policy reference, verify customer applicability",
+      "scope": "Narrow wrapper governance; not an unrestricted remote API proxy."
+    },
+    {
+      "id": "sap-cap-mcp",
+      "title": "CAP MCP adapter boundaries",
+      "url": "https://cap.cloud.sap/docs/guides/ai/cap-mcp",
+      "checked_at": "2026-10-02",
+      "revision": "living-document reviewed 2026-10-02",
+      "scope": "Development MCP differs from custom CAP service runtime MCP; runtime must not proxy SAP Application APIs."
+    }
+  ]
+}

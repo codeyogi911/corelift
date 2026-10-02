@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "synthetic": true,
+  "target": {
+    "family": "S4HANA",
+    "edition": "private",
+    "release": "2023",
+    "fps": "FPS02"
+  },
+  "snapshot_revision": "synthetic-fixture-0.1.0-NOT-SAP-API-EVIDENCE",
+  "objects": [
+    {
+      "object": "SYN_PURCHASE_C2",
+      "state": "released",
+      "contract": "C2",
+      "remote_pathway": "endorsed",
+      "source_id": "sap-cloudification",
+      "verification": "synthetic",
+      "supported_operations": [
+        "call"
+      ],
+      "endorsed_operations": [
+        "call"
+      ]
+    },
+    {
+      "object": "SYN_PURCHASE_CLASSIC",
+      "state": "classic",
+      "contract": "none",
+      "remote_pathway": "not-endorsed",
+      "source_id": "sap-cloudification",
+      "verification": "synthetic",
+      "supported_operations": [
+        "call"
+      ],
+      "endorsed_operations": []
+    },
+    {
+      "object": "SYN_DYNPRO",
+      "state": "classic",
+      "contract": "none",
+      "remote_pathway": "not-endorsed",
+      "source_id": "sap-cloudification",
+      "verification": "synthetic",
+      "supported_operations": [
+        "render"
+      ],
+      "endorsed_operations": []
+    },
+    {
+      "object": "SYN_INTERNAL_PURCHASE",
+      "state": "internal",
+      "contract": "none",
+      "remote_pathway": "not-endorsed",
+      "source_id": "sap-cloudification",
+      "verification": "synthetic",
+      "supported_operations": [
+        "call"
+      ],
+      "endorsed_operations": []
+    },
+    {
+      "object": "SYN_FORBIDDEN_PURCHASE",
+      "state": "not-recommended",
+      "contract": "none",
+      "remote_pathway": "not-endorsed",
+      "source_id": "sap-cloudification",
+      "verification": "synthetic",
+      "supported_operations": [
+        "call"
+      ],
+      "endorsed_operations": []
+    }
+  ]
+}

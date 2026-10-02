@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:corelift:inventory:1.0.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "source_system": {
+      "type": "object",
+      "properties": {
+        "family": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "enum": [
+            "S4HANA",
+            "ECC"
+          ]
+        },
+        "edition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "enum": [
+            "private",
+            "public",
+            "on-premise"
+          ]
+        },
+        "release": {
+          "type": "string",
+          "pattern": "^[0-9]{4}$"
+        },
+        "fps": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "family",
+        "edition",
+        "release",
+        "fps"
+      ],
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "family": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "enum": [
+            "S4HANA",
+            "ECC"
+          ]
+        },
+        "edition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "enum": [
+            "private",
+            "public",
+            "on-premise"
+          ]
+        },
+        "release": {
+          "type": "string",
+          "pattern": "^[0-9]{4}$"
+        },
+        "fps": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "family",
+        "edition",
+        "release",
+        "fps"
+      ],
+      "additionalProperties": false
+    },
+    "applications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "enum": [
+              "erp-core",
+              "extension"
+            ]
+          },
+          "usage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "enum": [
+              "used",
+              "unknown",
+              "unused-confirmed"
+            ]
+          },
+          "transaction_coupled": {
+            "type": "boolean"
+          },
+          "wrapper": {
+            "type": "boolean"
+          },
+          "coverage_complete": {
+            "type": "boolean"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000,
+            "uniqueItems": true
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000,
+            "uniqueItems": true
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "object": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000,
+                  "enum": [
+                    "table",
+                    "api",
+                    "technology",
+                    "custom"
+                  ]
+                },
+                "operation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000,
+                  "enum": [
+                    "read",
+                    "write",
+                    "call",
+                    "render"
+                  ]
+                }
+              },
+              "required": [
+                "object",
+                "kind",
+                "operation"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "abap": {
+            "type": "string",
+            "maxLength": 500000
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "role",
+          "usage",
+          "transaction_coupled",
+          "wrapper",
+          "coverage_complete",
+          "depends_on",
+          "datasets",
+          "dependencies",
+          "abap"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 1000
+    },
+    "screens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "application_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "technology": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "enum": [
+              "Dynpro",
+              "WebDynpro",
+              "Fiori"
+            ]
+          },
+          "pbo": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "pai": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "validation": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "authorization": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "value_help": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "locking": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "minItems": 0,
+            "maxItems": 1000
+          }
+        },
+        "required": [
+          "id",
+          "application_id",
+          "technology",
+          "pbo",
+          "pai",
+          "validation",
+          "authorization",
+          "value_help",
+          "locking",
+          "errors"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 1000
+    },
+    "datasets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "classification": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted",
+              "unknown"
+            ]
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "system_of_record": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "ownership": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "enum": [
+              "erp",
+              "extension",
+              "reference-cache",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "classification",
+          "owner",
+          "system_of_record",
+          "ownership"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 1000
+    }
+  },
+  "required": [
+    "schema_version",
+    "synthetic",
+    "source_system",
+    "target",
+    "applications",
+    "screens",
+    "datasets"
+  ],
+  "additionalProperties": false
+}

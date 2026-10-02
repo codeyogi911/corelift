@@ -1,0 +1,15 @@
+CoreLift
+Copyright 2026 Shashwat Jain and CoreLift contributors.
+
+CoreLift is an independent early-stage project. SAP, OpenAI, Anthropic and
+Anysphere product names are used for identification. No affiliation,
+endorsement, certification or trademark license is claimed.
+
+The unmodified Agent Plugins 1.0.0 JSON Schemas in evidence/ originate from
+https://github.com/agentplugins/agent-plugins-spec and are licensed under
+Apache-2.0 by their respective contributors. The upstream license policy is
+https://github.com/agentplugins/agent-plugins-spec/blob/main/LICENSE.md.
+
+Optional built workspace packages include third-party JavaScript software.
+Their full license and attribution texts are included in
+ui/generated/THIRD_PARTY_NOTICES.txt. See THIRD_PARTY.md.

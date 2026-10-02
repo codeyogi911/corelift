@@ -1,0 +1,2 @@
+# Only schema checks require this; demo, assessment, packages and tests use stdlib.
+jsonschema==4.26.0

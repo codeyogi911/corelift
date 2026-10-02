@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "corelift",
+  "version": "0.2.0",
+  "description": "SAP clean-core migration assistant: offline ECC/S4 ABAP assessment and reviewed migration planning.",
+  "author": {
+    "name": "Shashwat Jain",
+    "url": "https://github.com/codeyogi911"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/codeyogi911/corelift"
+}

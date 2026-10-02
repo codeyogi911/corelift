@@ -1,0 +1,29 @@
+{
+  "name": "corelift-workspace",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build:ui": "node ui/build.mjs",
+    "preview": "node ui/preview.mjs",
+    "mcp": "node ui/server.mjs",
+    "test:ui": "node --test ui/tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "ajv": "8.20.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "license": "Apache-2.0",
+  "author": "Shashwat Jain",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeyogi911/corelift.git"
+  }
+}

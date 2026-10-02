@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+dist-*/
+reports/
+reports-*/
+customer-data/
+.env
+.env.*
+*.pem
+*.key
+node_modules/
+ui/generated/
