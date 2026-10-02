@@ -2,26 +2,26 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
-import { loadSnapshot, parseArgs, resourceHTML, resultFor, schema, RESOURCE_URI, TOOL_NAME } from './shared.mjs';
+import { loadSnapshot, parseArgs, resourceHTML, hostResultFor, hostOutputSchema, RESOURCE_URI, TOOL_NAME } from './shared.mjs';
 
 const shutdown = new AbortController();
 let server;
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { shutdown.abort(); void server?.close(); });
 try {
-  const { assessment } = parseArgs(process.argv.slice(2));
+  const { assessment, shareSummary } = parseArgs(process.argv.slice(2));
   let snapshotJSON, loadError;
   try { snapshotJSON = await loadSnapshot(assessment, shutdown.signal); } catch (error) { loadError = error.message; }
   if (shutdown.signal.aborted) throw new Error("cancelled");
   const html = await resourceHTML();
   if (shutdown.signal.aborted) throw new Error("cancelled");
-  server = new Server({ name: 'corelift-local-workspace', version: '0.2.0' }, {
+  server = new Server({ name: 'corelift-local-workspace', version: '0.3.0' }, {
     capabilities: { tools: {}, resources: {} },
-    instructions: 'CoreLift inspects one frozen local assessment. Imported report assertions are unverified. No SAP/BTP connection, write, approval or deployment tools exist. Use structured/text results if this host cannot render MCP Apps.',
+    instructions: 'CoreLift keeps imported assessment details local. The empty-input tool sends fixed disclosure metadata by default, or exactly three aggregate counts only when --share-summary was explicitly set at local startup. No source, identifier, version, filename, hash or evidence detail is sent for imported reports. Bundled demo content is fictional. Imported assertions are unverified. No SAP/BTP connection, write, approval or deployment tools exist. Use structured/text results if this host cannot render MCP Apps.',
   });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [{
-    name: TOOL_NAME, title: 'CoreLift', description: 'Open the read-only CoreLift assessment workspace for the configured local report or synthetic demo.',
+    name: TOOL_NAME, title: 'CoreLift', description: 'Open the synthetic workspace or imported-report disclosure status. Imported reports send no details: fixed status by default, exactly three aggregate counts only with separate local startup consent. No tool argument can widen disclosure.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    outputSchema: schema,
+    outputSchema: hostOutputSchema,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: { ui: { resourceUri: RESOURCE_URI, visibility: ['model', 'app'] }, 'openai/ui': { entrypoints: [{ type: 'global' }] } },
   }] }));
@@ -30,7 +30,7 @@ try {
     const args = request.params.arguments ?? {};
     if (Object.keys(args).length) throw new McpError(ErrorCode.InvalidParams, 'This entrypoint accepts empty arguments only.');
     if (loadError) return { isError: true, content: [{ type: 'text', text: loadError }] };
-    return resultFor(snapshotJSON);
+    return hostResultFor(snapshotJSON, { shareSummary });
   });
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [{ uri: RESOURCE_URI, name: 'CoreLift assessment workspace', mimeType: RESOURCE_MIME_TYPE }] }));
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {

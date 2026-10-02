@@ -36,7 +36,7 @@ For any future live pathway, verify documented use against the [SAP API Policy](
 | `corelift/capabilities.py` permits offline assessment only | Typed named read capabilities, provider/version support, endpoint identity binding, time/object/output limits and backend authorization checks. Approval text must not unlock a missing provider. |
 | CLI accepts manually normalized JSON | A bounded local importer for one real supported export format, preserving original-file hashes, extractor/tool/version, check variant, result timestamp, usage window and missing coverage. Choose the format from an actual approved export. |
 | Customer API evidence stays `exported-unverified` | A separate verified-evidence adapter with target mapping, artifact provenance and per-operation/pathway evidence. Until then, keep conclusions unknown. |
-| MCP returns the whole assessment as structured content | An explicit disclosure policy and minimized host-visible projection before customer use. Local transport is not proof of local-only data. |
+| MCP 0.3.0 withholds imported contents by default; explicit startup consent sends only three counts | Confirm the protected version is installed before customer use. Agree retention and host disclosure separately from access. Local transport is not proof of local-only data. |
 | Demo UI always labels SAP/BTP not connected | Distinct declared-access, preflight, observed-connection and imported-evidence states, each backed by an event/result, never inferred from a checkbox. |
 
 ## Proposed local intake contract
@@ -55,7 +55,7 @@ Hash original local artifacts as well as normalized JSON. Keep scope, exporter v
 
 Raw exports and code remain in an explicitly selected local customer-data directory outside the public checkout and package roots. Do not attach them to chat, publish them, send them to a model, or include them in telemetry. Derived identifiers, screen behavior and findings can also be confidential.
 
-Today `ui/shared.mjs` returns the full normalized assessment to its MCP host, so the current imported-report mode is not a local-only confidentiality guarantee. Until a minimized disclosure projection is implemented and approved, evaluate customer material through the local CLI without returning its contents to the assistant or MCP host. Any host-visible summary must be explicitly scoped and reviewed; raw code is excluded. Local retention and deletion requirements must be agreed before intake. No claim of encryption, credential isolation or automatic sanitization is made by the current prototype.
+CoreLift 0.3.0 keeps the full imported assessment in the local CLI/preview and server memory. Its MCP tool sends fixed disclosure status by default; separate `--share-summary` startup consent sends exactly three aggregate counts. No imported evidence goes in UI resource content or `_meta`. See [the action-by-action disclosure contract](privacy-boundary.md), including host launch paths and independent file/terminal/browser access. Confirm the installed plugin includes this change before customer intake. Local retention and deletion requirements must still be agreed; no encryption, credential isolation or automatic sanitization is claimed.
 
 ## Deterministic checks before a live connector
 

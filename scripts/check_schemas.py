@@ -23,6 +23,7 @@ def main():
               "sources": load(ROOT / "evidence/sources.json")}
     inputs["assessment"] = assess(inputs["inventory"], inputs["api-evidence"], inputs["sources"])
     inputs["workspace"] = snapshot()
+    inputs["host-summary"] = {"host_summary_version": "1.0.0", "mode": "imported", "read_only": True, "disclosure": "withheld", "counts": None}
     for name, value in inputs.items():
         schema = load(ROOT / "schemas" / f"{name}.schema.json")
         Draft202012Validator.check_schema(schema)
@@ -37,7 +38,7 @@ def main():
     assert hashlib.sha256(official_mcp.read_bytes()).hexdigest() == official_mcp.with_suffix(".sha256").read_text().strip()
     Draft202012Validator.check_schema(load(official_mcp))
     Draft202012Validator(load(official_mcp)).validate(load(ROOT / "ui/codex-mcp.json"))
-    print("PASS: five contracts, portable manifest and optional MCP config match JSON Schema 2020-12; official schema checksums verified")
+    print("PASS: six contracts, portable manifest and optional MCP config match JSON Schema 2020-12; official schema checksums verified")
 
 
 if __name__ == "__main__":

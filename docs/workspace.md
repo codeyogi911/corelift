@@ -1,6 +1,6 @@
 # CoreLift local assessment workspace
 
-The optional workspace reads the same validated assessment as the CLI. It provides Connections, Applications, Clean-core findings, Migration plan and Verification. Source and future-target versions, synthetic/imported provenance and unapproved status remain visible. It has no execute, approve, upload, credential or connector controls.
+The standalone local preview and bundled public demo read the same validated assessment as the CLI. They provide Connections, Applications, Clean-core findings, Migration plan and Verification. Source and future-target versions, synthetic/imported provenance and unapproved status remain visible. Imported MCP reports instead show disclosure status by default, with a separate opt-in for three aggregate counts. See [the exact data boundary](privacy-boundary.md). There are no execute, approve, upload, credential or connector controls.
 
 ## Run locally
 
@@ -12,7 +12,7 @@ npm run build:ui
 npm run preview
 ```
 
-Open `http://127.0.0.1:4173/`. Stop with Ctrl-C. This is a loopback browser preview, not Codex sidebar acceptance. All UI code/styles are bundled locally; no CDN, analytics, external fonts or automatic source fetches are used. The install step downloads pinned development dependencies from npm; assessment and UI operation use local data only.
+Open `http://127.0.0.1:4173/`. Stop with Ctrl-C. This is a loopback browser preview, not Codex sidebar acceptance. All UI code/styles are bundled locally; no CDN, analytics, external fonts or automatic source fetches are used. The install step downloads pinned development dependencies from npm; the local preview makes no automatic external requests. Data returned to an MCP host may be processed remotely by that host.
 
 To inspect an explicitly selected local assessment already produced by the CLI:
 
@@ -31,7 +31,7 @@ python3 scripts/build_packages.py --with-ui --output dist-workspace
 
 Choose a fresh output directory. `dist-workspace/codex` contains portable root `plugin.json`, real root `mcp.json`, bundled `ui/generated/server.mjs` and a self-contained MCP App HTML resource. This built package needs Node 22+ and Python 3.11+, without an npm install. The Cursor and Claude packages keep the skills/CLI workflow and contain no MCP UI configuration. The default builder without `--with-ui` still produces skills/CLI packages for all three hosts.
 
-The stdio server exposes one read-only tool, `open_corelift_workspace`, which accepts `{}`. Its tool definition declares `_meta.ui.resourceUri` and `_meta["openai/ui"].entrypoints: [{"type":"global"}]`. The registered `ui://corelift/workspace-v0.2.0` resource has MIME type `text/html;profile=mcp-app`, the official MCP Apps bridge and restrictive CSP metadata. These declarations are protocol-tested. They are not a runtime acceptance claim. No host/global settings, credentials or marketplace entries are changed by the build.
+The stdio server exposes one read-only tool, `open_corelift_workspace`, which accepts `{}`. Its tool definition declares `_meta.ui.resourceUri` and `_meta["openai/ui"].entrypoints: [{"type":"global"}]`. The registered `ui://corelift/workspace-v0.3.0` resource has MIME type `text/html;profile=mcp-app`, the official MCP Apps bridge and restrictive CSP metadata. These declarations are protocol-tested. They are not a runtime acceptance claim. No host/global settings, credentials or marketplace entries are changed by the build.
 
 For a separately authorized host smoke test, use that host's current supported local plugin-loading workflow and select the built Codex package. Confirm entrypoint discovery, primary sidebar placement, initial rendering, theme/size/context updates and reopening; retain text/structured output as fallback. Actual Codex sidebar loading remains unverified. Do not treat local preview success as satisfying this test.
 
@@ -39,9 +39,11 @@ Direct protocol command for a compatible local MCP client:
 
 ```sh
 node ui/generated/server.mjs
-# Or select a single report at process startup:
+# Or select a single report, withholding all contents and counts from the host:
 node ui/generated/server.mjs --assessment /absolute/path/assessment.json
 ```
+
+Add `--share-summary` only after separate explicit permission to send the three counts; connection consent is insufficient. Detailed imported evidence is available only in the local CLI/preview. The report path is visible in local launch configuration; this server boundary does not restrict other host tools.
 
 Stdout is reserved for MCP JSON-RPC; this command waits for an MCP client. `CORELIFT_PYTHON` may select a trusted local Python executable if `python3` is not on PATH. The tool/UI cannot supply executable names, file paths or subprocess arguments.
 

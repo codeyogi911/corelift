@@ -41,3 +41,15 @@ A local Codex CLI 0.159.3 installation succeeded for CoreLift 0.2.0 after explic
 ## User-observed sidebar discovery
 
 On 2026-10-02 the user reported that CoreLift is visible in the Codex sidebar. Record this as user-observed sidebar discovery, not independent verification of resource loading, assessment content, navigation or reopening. Those interaction checks remain pending. No SAP connection has been established. See [first S/4HANA intake design](read-only-intake.md) for the bounded next step.
+
+## Imported-report disclosure boundary, workspace 0.3.0
+
+Verified locally on 2026-10-02 with Node 23.6.0 and Python 3.14.4. This update is prepared locally; it does not replace the installed 0.2.0 plugin or establish new host UI acceptance.
+
+- 41 Python tests passed, including distinct S/4 source/target profiles and denial of absent live providers despite approval-shaped metadata.
+- 21 Node tests passed. Public synthetic demo protocol, bundled/relocated package parity and existing route/cancellation checks remain intact. New planted-marker checks cover source and generated MCP servers, default-withheld and explicit-three-count modes, metadata/resources/errors/stderr, frozen session policy and relocated package import behavior. The separate loopback preview retains the full selected local report.
+- DOM-level tests execute the real application render logic with a minimal DOM seam: full demo rendering, transition to disclosure status with stale details removed, refusal of otherwise valid full imported host payloads and full local preview disclosure notice. No new pixel inspection or actual Codex lifecycle test is claimed.
+- Six JSON contracts and portable/MCP manifests passed reference validation. Host output schema rejects full imported workspace content, extra fields, mismatched disclosure and invalid counts. Installed configuration is not changed by building this package.
+- Independent source review exercised actual stdio responses with planted filename, identifier, reason and source-title markers. It found no concrete disclosure or correctness blocker. Generated/package regressions also pass in the primary test run.
+
+See [the exact data-flow contract](privacy-boundary.md). The boundary covers CoreLift MCP responses, not independent host filesystem, CLI output, browser/screenshot access or retention. All test material is synthetic. No SAP access, ATC run, monitoring, customer upload or deployment occurred.

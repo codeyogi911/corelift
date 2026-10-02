@@ -77,7 +77,7 @@ def build(destination, root=ROOT, with_ui=False):
             "The source repository README provides the full development/test workflow. See LICENSE, NOTICE and THIRD_PARTY.md for licensing.\n")
         if host == "codex" and with_ui:
             with (package / "README.md").open("a") as readme:
-                readme.write("\nThis optional package includes a real read-only stdio MCP workspace and root `mcp.json`. Requires Node 22+ and Python 3.11+. No npm install is needed in this built package. The server accepts empty input and serves a bundled UI resource. Codex global sidebar acceptance is unverified. See `docs/workspace.md` for scope and fallback.\n")
+                readme.write("\nThis optional package includes a real read-only stdio MCP workspace and root `mcp.json`. Requires Node 22+ and Python 3.11+. No npm install is needed in this built package. The server accepts empty input and serves a bundled UI resource. The public synthetic demo remains complete. Imported reports withhold contents and counts unless separate startup consent enables exactly three aggregate counts; full details stay in the local CLI/preview. See docs/privacy-boundary.md. Codex global sidebar acceptance is unverified. See `docs/workspace.md` for scope and fallback.\n")
     return destination
 
 

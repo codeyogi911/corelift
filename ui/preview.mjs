@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
-import { loadSnapshot, parseArgs, resourceHTML, resultFor } from './shared.mjs';
+import { loadSnapshot, parseArgs, resourceHTML, localResultFor } from './shared.mjs';
 
 export async function startPreview({ assessment, port = 4173, signal } = {}) {
   let snapshotJSON, loadError;
@@ -21,7 +21,7 @@ export async function startPreview({ assessment, port = 4173, signal } = {}) {
     if (req.url === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); return; }
     if (req.url === '/api/workspace') {
       res.writeHead(loadError ? 422 : 200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(loadError ? { error: loadError } : resultFor(snapshotJSON))); return;
+      res.end(JSON.stringify(loadError ? { error: loadError } : localResultFor(snapshotJSON))); return;
     }
     res.writeHead(404); res.end('Unknown preview route.');
   });

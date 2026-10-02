@@ -1,10 +1,11 @@
 import { App, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 import validateWorkspace from './generated/validate-workspace.mjs';
+import validateHostSummary from './generated/validate-host-summary.mjs';
 import { VIEWS, LABELS, DISPOSITIONS, safeSourceURL, routeFromContext, matchesApplication } from './presentation.mjs';
 
 const root = document.querySelector('#root');
 const preview = document.documentElement.dataset.preview === 'true';
-const state = { view: 'applications', selected: null, search: '', data: null, loading: true, error: '', status: '', bridge: null, capabilities: {} };
+const state = { view: 'applications', selected: null, search: '', data: null, summary: null, loading: true, error: '', status: '', bridge: null, capabilities: {} };
 let initialTimer;
 
 // Export content is always a text node; no innerHTML, Markdown or template parsing.
@@ -148,8 +149,27 @@ function verification() {
       section('Practical limits', list(a.run_record.limitations))),
     el('div', { class: 'callout' }, 'SAP access, authorizations, compilation, API sequencing, data migration, deployment and Codex sidebar acceptance have not been verified.'));
 }
+function disclosureView() {
+  const summary = state.summary;
+  const shared = summary.disclosure === 'aggregate-counts';
+  return el('main', { id: 'main', class: 'boot' },
+    el('div', { class: 'brand' }, 'CoreLift'), el('h1', {}, 'Imported report stays local'),
+    el('div', { class: 'surface' }, tag(shared ? 'Three counts shared' : 'Contents withheld'),
+      el('h2', {}, 'What this host receives'),
+      el('p', {}, shared ? 'You separately enabled aggregate disclosure at server startup. These imported counts are unverified assertions.' : 'Only fixed imported, withheld, read-only and format-version metadata. No report contents or counts are sent.'),
+      shared ? el('dl', {}, el('dt', {}, 'Applications'), el('dd', {}, summary.counts.applications),
+        el('dt', {}, 'Applications with unknowns'), el('dd', {}, summary.counts.applications_with_unknowns),
+        el('dt', {}, 'Blocked stages'), el('dd', {}, summary.counts.blocked_stages)) : null,
+      el('p', {}, 'No application identifiers, code, filenames, hashes, system versions, evidence, screen details or data ownership are included.'),
+      el('h2', {}, 'Review detailed evidence locally'),
+      el('p', {}, 'Use the CoreLift CLI or separate loopback preview for the full report. This workspace has no control that widens disclosure.'),
+      el('div', { class: 'callout' }, 'Permission to connect to SAP is separate from permission to send private information to an AI host. Local stdio transport does not make host-visible results local-only.'),
+      state.error ? el('p', { class: 'error', role: 'alert' }, state.error) : null,
+      state.capabilities.serverTools ? button(state.loading ? 'Loading…' : 'Reload disclosure status', refresh, { disabled: state.loading ? true : undefined }) : null));
+}
 function render() {
   root.setAttribute('aria-busy', String(state.loading));
+  if (state.summary) { root.replaceChildren(disclosureView()); return; }
   if (!state.data) {
     if (state.error) root.replaceChildren(el('main', { id: 'main', class: 'boot' }, el('div', { class: 'error', role: 'alert' }, el('h1', {}, 'Assessment unavailable'),
       el('p', {}, state.error), el('p', {}, 'Use the structured tool result or the CoreLift CLI if this host cannot show MCP Apps.'),
@@ -171,14 +191,18 @@ function render() {
     ...[page].flat(), el('p', { class: 'status-line', role: 'status', 'aria-live': 'polite' }, state.status || 'All recommendations remain unapproved.'));
   root.replaceChildren(el('div', { class: 'shell' }, rail, el('div', { class: 'workspace' },
     el('header', { class: 'context-bar' }, el('span', {}, el('strong', {}, `Source ${a.source_system.family} ${a.source_system.release}`), ` → Target ${a.target.family} ${a.target.release} · ${a.target.edition} · ${a.target.fps}`), tag('Not approved', 'neutral')),
-    el('div', { class: 'notice' }, el('strong', {}, state.data.mode === 'demo' ? 'Synthetic demo' : 'Imported assessment'), state.data.provenance_notice), main)));
+    el('div', { class: 'notice' }, el('strong', {}, state.data.mode === 'demo' ? 'Synthetic demo' : 'Imported assessment'), state.data.provenance_notice, preview && state.data.mode === 'imported' ? ' Full report visible in this local preview. MCP host disclosure is configured separately.' : ''), main)));
 }
 function acceptResult(result) {
   if (result.isError) throw new Error(result.content?.find(c => c.type === 'text')?.text || 'The local assessment could not be loaded.');
   const value = result.structuredContent;
-  if (!validateWorkspace(value) || (value.mode === 'imported' && value.rehearsal !== null) || (value.mode === 'demo' && (!value.assessment.synthetic || !value.rehearsal))) throw new Error('The workspace received an invalid or unsupported assessment snapshot.');
+  if (!preview && validateHostSummary(value)) {
+    clearTimeout(initialTimer); state.summary = value; state.data = null; state.selected = null;
+    state.loading = false; state.error = ''; render(); return;
+  }
+  if ((!preview && value?.mode !== 'demo') || !validateWorkspace(value) || (value.mode === 'imported' && value.rehearsal !== null) || (value.mode === 'demo' && (!value.assessment.synthetic || !value.rehearsal))) throw new Error('The workspace received an invalid or unsupported assessment snapshot.');
   clearTimeout(initialTimer);
-  state.data = value; state.loading = false; state.error = ''; render();
+  state.summary = null; state.data = value; state.loading = false; state.error = ''; render();
 }
 async function refresh() {
   state.loading = true; state.error = ''; render();
@@ -198,7 +222,7 @@ function hostContext(context) {
   if (context?.theme === 'dark' || context?.theme === 'light') document.documentElement.dataset.theme = context.theme;
   if (context?.styles?.variables) applyHostStyleVariables(context.styles.variables);
   const route = routeFromContext(context); if (route) state.view = route;
-  if (state.data) render();
+  if (state.data || state.summary) render();
 }
 if (preview) {
   document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -206,13 +230,13 @@ if (preview) {
 } else if (window.parent === window) {
   state.loading = false; state.error = 'This MCP resource needs a supported host. Start the separate local preview to inspect it in a browser.'; render();
 } else {
-  const app = new App({ name: 'CoreLift workspace', version: '0.2.0' }, {});
+  const app = new App({ name: 'CoreLift workspace', version: '0.3.0' }, {});
   state.bridge = app;
   app.ontoolresult = result => { try { acceptResult(result); } catch (error) { state.loading = false; state.error = error.message; render(); } };
   app.onhostcontextchanged = hostContext;
   app.ontoolcancelled = () => { state.loading = false; state.error = 'The host cancelled loading this assessment.'; render(); };
-  initialTimer = setTimeout(() => { if (!state.data) { state.loading = false; state.error = 'No initial assessment arrived. Use the tool’s text result or retry through the host.'; render(); } }, 10000);
-  app.connect(undefined, { timeout: 8000 }).then(() => { state.capabilities = app.getHostCapabilities() || {}; hostContext(app.getHostContext()); if (state.data) render(); }).catch(() => {
+  initialTimer = setTimeout(() => { if (!state.data && !state.summary) { state.loading = false; state.error = 'No initial assessment arrived. Use the tool’s text result or retry through the host.'; render(); } }, 10000);
+  app.connect(undefined, { timeout: 8000 }).then(() => { state.capabilities = app.getHostCapabilities() || {}; hostContext(app.getHostContext()); if (state.data || state.summary) render(); }).catch(() => {
     clearTimeout(initialTimer); state.loading = false; state.error = 'This host did not complete MCP Apps initialization. The assessment remains available as structured data and text.'; render();
   });
   window.addEventListener('pagehide', () => { clearTimeout(initialTimer); void app.close(); }, { once: true });
