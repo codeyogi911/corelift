@@ -15,4 +15,4 @@ You build one checkpoint of one SAP application. You get the path of its `migrat
 4. Preserve the business behavior of the original: same inputs, outputs, validations, authorization checks and messages. Write the checkpoint's tests first from that behavior, then the code, then run them with the stack's test command.
 5. Keep `target/README.md` (design choices, mapping to the original) and `migration/<APP>/REVIEW.md` (assumptions, open questions, checks a human must run before transport or deploy) current.
 
-Write only inside `migration/<APP>/`. Network calls and SAP access are outside your task. Reply in five lines: checkpoint, files changed, test command and result (or why tests cannot run here), open questions, confidence.
+Write only inside `migration/<APP>/`. SAP access is outside your task; installing the stack's test packages is fine. When tests cannot run here (ABAP Unit, packages unavailable), say so: the behavior gate is then blocked, not passed. Reply in five lines: checkpoint, files changed, test command and result (or why tests cannot run here), open questions, confidence.

@@ -48,7 +48,8 @@ def pattern(disposition, stack):
     if disposition != "btp-sidecar-candidate":
         return PATTERNS[disposition]
     if stack["placement"] == "on-stack":
-        return PATTERNS["retain-on-stack-candidate"]
+        title, instruction = PATTERNS["retain-on-stack-candidate"]
+        return title, "The user chose an on-stack stack, so this side-by-side candidate is drafted on-stack. " + instruction
     return (f"Side-by-side extension on {stack['name']}",
             "Draft the extension in `target/` following `../../target-stack.md`. It owns the extension data and calls only "
             "the released remote API listed below. Keep ERP authoritative.")
@@ -130,7 +131,10 @@ def plan(workspace):
     briefs = []
     stack = stacks.chosen(ws)
     if not (ws / "target-stack.md").is_file():
-        shutil.copyfile(stacks.profiles(ws)[stack["id"]]["path"], ws / "target-stack.md")
+        known = stacks.profiles(ws)
+        if stack["id"] not in known:
+            raise ContractError(f"chosen stack {stack['id']} has no profile any more; choose a stack again")
+        shutil.copyfile(known[stack["id"]]["path"], ws / "target-stack.md")
     for d in result["decisions"]:
         folder = ws / "migration" / slug(d["application_id"])
         title, instruction = pattern(d["disposition"], stack)
@@ -173,7 +177,8 @@ def plan(workspace):
 def _screen_lines(app, screens, captures):
     """Screen evidence and reference screenshots: the behavior the target must keep."""
     own = [s for s in screens if s["application_id"] == app]
-    shots = [c for c in captures if c.get("application") == app]
+    # Screenshots nobody matched to an app go to every app that has screens.
+    shots = [c for c in captures if c.get("application") == app or (own and c.get("application") is None)]
     if not own and not shots:
         return []
     lines = ["", "## Screens", "",

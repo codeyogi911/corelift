@@ -90,6 +90,16 @@ class ScreenCaptureTests(unittest.TestCase):
         self.assertIn("M_BANF_BSA", brief)
         self.assertIn("../../screens/ZDEMO_PR/initial.png", brief)
 
+    def test_an_unmatched_screenshot_reaches_every_app_with_screens(self):
+        screens.plan(self.ws, SYSTEM, "100", approval())
+        image = Path(self.folder.name) / "shot.png"
+        image.write_bytes(PNG)
+        screens.record(self.ws, "ZDEMO_PR", image)
+        pipeline.plan(self.ws)
+        for app in ("ZDEMO_PR_DIALOG", "ZDEMO_PO_REPORT"):
+            self.assertIn("screens/ZDEMO_PR/initial.png", (self.ws / f"migration/{app}/BRIEF.md").read_text())
+        self.assertNotIn("## Screens", (self.ws / "migration/Z_DEMO_NOTIFY/BRIEF.md").read_text())
+
 
 CUSTOM = """---
 id: onprem-java
@@ -145,6 +155,15 @@ class TargetStackTests(unittest.TestCase):
         (self.ws / "stacks/onprem-java.md").write_text(CUSTOM.replace("id: onprem-java", "id: aws"))
         with self.assertRaises(ContractError):
             stacks.profiles(self.ws)
+
+    def test_a_removed_workspace_stack_is_explained(self):
+        (self.ws / "stacks").mkdir()
+        (self.ws / "stacks/onprem-java.md").write_text(CUSTOM)
+        stacks.choose(self.ws, "onprem-java")
+        (self.ws / "stacks/onprem-java.md").unlink()
+        (self.ws / "target-stack.md").unlink()
+        with self.assertRaises(ContractError):
+            pipeline.plan(self.ws)
 
     def test_choosing_an_unknown_stack_names_the_known_ones(self):
         with self.assertRaises(ContractError) as caught:
@@ -261,6 +280,25 @@ class CheckpointLoopTests(unittest.TestCase):
         checkpoints.delegate(self.ws, [self.APP], "run the rest on your own")
         checkpoints.gate(self.ws, self.APP, "skeleton", "approval", "pass", "delegated", "within delegation")
         self.assertEqual(checkpoints.close(self.ws, self.APP, "skeleton")["status"], "closed")
+
+    def test_a_second_delegation_adds_to_the_first(self):
+        checkpoints.delegate(self.ws, [self.APP], "do the dialog yourselves")
+        checkpoints.delegate(self.ws, ["Z_DEMO_NOTIFY"], "and the mailer")
+        self.assertEqual(json.loads((self.ws / "delegation.json").read_text())["applications"], [self.APP, "Z_DEMO_NOTIFY"])
+
+    def test_replanning_keeps_gates_of_unchanged_open_checkpoints(self):
+        self.build()
+        checkpoints.gate(self.ws, self.APP, "skeleton", "behavior", "pass", "builder", "green")
+        checkpoints.plan(self.ws, self.APP, [{"id": "skeleton", "goal": "service and list screen", "screens": True}])
+        self.assertEqual(checkpoints.status(self.ws)[self.APP][0]["gates"], {"behavior": "pass"})
+
+    def test_replacing_a_reference_screenshot_makes_the_screen_review_stale(self):
+        self.build()
+        self.gates()
+        (self.ws / "screens").mkdir(exist_ok=True)
+        (self.ws / "screens/INDEX.json").write_text("[]")
+        with self.assertRaises(ContractError):
+            checkpoints.close(self.ws, self.APP, "skeleton")
 
     def test_replanning_keeps_closed_checkpoints(self):
         self.build()

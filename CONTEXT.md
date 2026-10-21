@@ -121,7 +121,7 @@ A screenshot of one transaction of the source system, taken in display mode with
 _Avoid_: screen capture (the step), mockup
 
 **Target stack**:
-Where an application's side-by-side code is drafted, described by a stack profile: SAP BTP with CAP by default, ABAP Cloud, AWS, Google Cloud, Azure or a customer's own. It never changes a disposition.
+Where an application's side-by-side code is drafted, described by a stack profile: SAP BTP with CAP by default, ABAP Cloud, AWS, Google Cloud, Azure or a customer's own. It never changes a disposition; an on-stack choice drafts side-by-side candidates as ABAP Cloud.
 _Avoid_: platform, cloud, target (the SAP release)
 
 **Stack profile**:
@@ -133,7 +133,7 @@ One small, reviewable step of a shift, named in a few words and closed only when
 _Avoid_: milestone, task, stage (stages belong to the migration plan)
 
 **Gate**:
-One verdict a checkpoint needs: behavior, screen review, two independent reviews and approval. A code change makes it stale; a missing tool leaves it blocked, never passed.
+One verdict a checkpoint needs: behavior, screen review, two independent reviews and approval. A code change makes it stale; a missing tool leaves it blocked, never passed. Recorded by agents in a local ledger, not tamper-proof.
 _Avoid_: check, step
 
 **Delegation**:

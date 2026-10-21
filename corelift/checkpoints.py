@@ -52,8 +52,12 @@ def _save(ws, application, loop):
 
 
 def fingerprint(ws, application, checkpoint):
-    """SHA-256 over the checkpoint's goal and every file under target/."""
+    """SHA-256 over the checkpoint's goal, every file under target/ and, for
+    screen checkpoints, the reference screenshot index."""
     digest = hashlib.sha256(json.dumps([checkpoint["id"], checkpoint["goal"], checkpoint["screens"]]).encode())
+    index = ws / "screens" / "INDEX.json"
+    if checkpoint["screens"] and index.is_file():
+        digest.update(index.read_bytes())
     target = _app_folder(ws, application) / "target"
     for path in sorted(p for p in target.rglob("*") if p.is_file()) if target.is_dir() else []:
         digest.update(path.relative_to(target).as_posix().encode() + b"\0" + path.read_bytes() + b"\0")
@@ -73,6 +77,11 @@ def plan(workspace, application, checkpoints, builder="builder"):
             raise ContractError("each checkpoint needs a short lowercase id and a goal of a few words")
         if cid in closed:
             revised.append(closed.pop(cid))
+            continue
+        kept = next((c for c in old["checkpoints"] if c["id"] == cid and c["goal"] == goal[:200]
+                     and c["screens"] == bool(item.get("screens"))), None)
+        if kept:
+            revised.append(kept)
             continue
         revised.append({"id": cid, "goal": goal[:200], "screens": bool(item.get("screens")), "status": "open", "gates": {}})
     if closed:
@@ -121,7 +130,7 @@ def gate(workspace, application, checkpoint_id, name, verdict, by, evidence):
         raise ContractError(f"{name} comes after {', '.join(waiting)}; pass those on the current code first")
     if name.startswith("review-"):
         other = current.get("review-b" if name == "review-a" else "review-a")
-        if by == loop["builder"] or (other and other["by"] == by):
+        if by.lower() in (loop["builder"].lower(), "sap-migration-engineer") or (other and other["by"].lower() == by.lower()):
             raise ContractError("reviews need two reviewers other than the builder, each in a fresh context")
     if name == "approval" and not (by == "user" or (by == "delegated" and _delegated(ws, application))):
         raise ContractError("approval is by the user, or 'delegated' after the user delegated this application")
@@ -144,10 +153,13 @@ def close(workspace, application, checkpoint_id):
     current = _current(ws, application, checkpoint)
     stale = [g for g in checkpoint["gates"] if g not in current]
     missing = [g for g in _required(checkpoint) if g not in current or current[g]["verdict"] == "fail"]
-    if stale or missing:
-        raise ContractError("cannot close " + checkpoint_id + ": "
-                            + "; ".join(filter(None, [f"stale after a code change: {', '.join(stale)}" if stale else "",
-                                                      f"needs a pass: {', '.join(missing)}" if missing else ""])))
+    reasons = []
+    if stale:
+        reasons.append(f"stale after a code change: {', '.join(stale)}")
+    if missing:
+        reasons.append(f"needs a pass: {', '.join(missing)}")
+    if reasons:
+        raise ContractError(f"cannot close {checkpoint_id}: " + "; ".join(reasons))
     blocked = [g for g in _required(checkpoint) if current[g]["verdict"] == "blocked"]
     checkpoint.update(status="closed-unverified" if blocked else "closed", closed_at=_now(),
                       fingerprint=fingerprint(ws, application, checkpoint))
@@ -163,7 +175,10 @@ def delegate(workspace, applications, statement):
         _app_folder(ws, application)
     if not str(statement).strip():
         raise ContractError("record the user's own words for a delegation")
-    value = {"applications": sorted(set(applications)), "statement": str(statement)[:1000], "recorded_at": _now()}
+    path = ws / "delegation.json"
+    earlier = json.loads(path.read_text()) if path.is_file() else {"applications": [], "statements": []}
+    value = {"applications": sorted(set(earlier["applications"]) | set(applications)),
+             "statements": earlier["statements"] + [{"applications": sorted(set(applications)), "statement": str(statement)[:1000], "recorded_at": _now()}]}
     (ws / "delegation.json").write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
     return value
 
