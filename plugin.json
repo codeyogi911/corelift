@@ -1,12 +1,32 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "corelift",
-  "version": "0.2.0",
-  "description": "SAP clean-core migration assistant: offline ECC/S4 ABAP assessment and reviewed migration planning.",
+  "version": "0.3.0",
+  "description": "Connect your SAP system and let agents lift custom ABAP apps to clean core: read-only discovery, pinned SAP API evidence, assessment and drafted ABAP Cloud/BTP target code.",
   "author": {
     "name": "Shashwat Jain",
     "url": "https://github.com/codeyogi911"
   },
   "license": "Apache-2.0",
-  "homepage": "https://github.com/codeyogi911/corelift"
+  "homepage": "https://github.com/codeyogi911/corelift",
+  "repository": "https://github.com/codeyogi911/corelift",
+  "keywords": [
+    "sap",
+    "abap",
+    "s4hana",
+    "clean-core",
+    "btp",
+    "migration"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/connect-sap/SKILL.md",
+      "interface": {
+        "displayName": "CoreLift",
+        "shortDescription": "Lift and shift SAP custom code to clean core",
+        "developerName": "Shashwat Jain",
+        "category": "Coding"
+      }
+    }
+  }
 }

@@ -1,0 +1,18 @@
+{
+  "name": "corelift",
+  "owner": {
+    "name": "Shashwat Jain",
+    "url": "https://github.com/codeyogi911"
+  },
+  "metadata": {
+    "description": "CoreLift: connect SAP and lift custom ABAP apps to clean core with agents."
+  },
+  "plugins": [
+    {
+      "name": "corelift",
+      "source": "./",
+      "description": "Connect your SAP system and let agents lift custom ABAP apps to clean core: read-only discovery, pinned SAP API evidence, assessment and drafted ABAP Cloud/BTP target code.",
+      "category": "development"
+    }
+  ]
+}

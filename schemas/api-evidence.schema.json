@@ -109,7 +109,8 @@
             "maxLength": 1000,
             "enum": [
               "synthetic",
-              "exported-unverified"
+              "exported-unverified",
+              "cloudification-pinned"
             ]
           },
           "supported_operations": {

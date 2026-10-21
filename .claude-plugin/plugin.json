@@ -1,0 +1,62 @@
+{
+  "name": "corelift",
+  "displayName": "CoreLift",
+  "version": "0.3.0",
+  "description": "Connect your SAP system and let agents lift custom ABAP apps to clean core: read-only discovery, pinned SAP API evidence, assessment and drafted ABAP Cloud/BTP target code.",
+  "author": {
+    "name": "Shashwat Jain",
+    "url": "https://github.com/codeyogi911"
+  },
+  "homepage": "https://github.com/codeyogi911/corelift",
+  "repository": "https://github.com/codeyogi911/corelift",
+  "license": "Apache-2.0",
+  "keywords": [
+    "sap",
+    "abap",
+    "s4hana",
+    "clean-core",
+    "btp",
+    "migration"
+  ],
+  "userConfig": {
+    "sap_url": {
+      "type": "string",
+      "title": "SAP system URL",
+      "description": "https://host:port of your SAP system (ADT services). Leave empty to connect later with `corelift connect`, or type demo for a fictional system.",
+      "default": ""
+    },
+    "sap_client": {
+      "type": "string",
+      "title": "SAP client",
+      "description": "Client (Mandant), e.g. 100. Empty uses the system default.",
+      "default": ""
+    },
+    "sap_user": {
+      "type": "string",
+      "title": "SAP user",
+      "description": "User with ADT display authorization (S_ADT_RES, S_DEVELOP activity 03).",
+      "default": ""
+    },
+    "sap_password": {
+      "type": "string",
+      "title": "SAP password",
+      "description": "Stored in your OS credential store; never shown to the agent.",
+      "sensitive": true
+    }
+  },
+  "mcpServers": {
+    "corelift-sap": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/corelift.py",
+        "mcp"
+      ],
+      "env": {
+        "CORELIFT_SAP_URL": "${user_config.sap_url}",
+        "CORELIFT_SAP_CLIENT": "${user_config.sap_client}",
+        "CORELIFT_SAP_USER": "${user_config.sap_user}",
+        "CORELIFT_SAP_PASSWORD": "${user_config.sap_password}"
+      }
+    }
+  }
+}
