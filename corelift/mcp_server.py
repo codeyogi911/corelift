@@ -6,6 +6,7 @@ writes, transports, activates or deploys anything in SAP or BTP. Stdout is
 reserved for JSON-RPC; diagnostics go to stderr.
 """
 import json
+import shlex
 import sys
 import traceback
 from pathlib import Path
@@ -18,6 +19,7 @@ from .sap.adt import ADTError
 from .sap.discover import DEFAULT_TARGET, source_system
 
 VERSION = json.loads((ROOT / "plugin.json").read_text())["version"]
+CONNECT = f"python3 {shlex.quote(str(ROOT / 'scripts' / 'corelift.py'))} connect"  # the real installed path, not a placeholder
 
 PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
 INSTRUCTIONS = (
@@ -62,10 +64,11 @@ def _target(args):
 
 def status(args):
     settings = _settings()
-    info = profile.public(settings)
+    info = {**profile.public(settings), "connect_command": CONNECT}
     if not settings:
-        info["next_step"] = ("Ask the user to connect: in a terminal run `python3 <plugin-root>/scripts/corelift.py connect` "
-                             "(Claude Code users can instead fill the plugin's SAP settings). Or call sap_use_demo_system.")
+        info["next_step"] = (f"Ask the user to connect: in their own terminal run `{CONNECT}` (it asks for URL, client, user and a "
+                             f"hidden password; Claude Code users can instead fill the plugin's SAP settings). To try first, call "
+                             f"sap_use_demo_system for this session, or run `{CONNECT} --demo` to keep the demo connected.")
         return info
     try:
         client = _client()
