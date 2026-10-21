@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from corelift import mcp_server, stacks
+from corelift import checkpoints, mcp_server, stacks
 from corelift.capabilities import CapabilityDenied
 from corelift.contracts import ContractError
 from corelift.sap import mock, pipeline, screens
@@ -173,6 +173,161 @@ class TargetStackTests(unittest.TestCase):
         pipeline.plan(self.ws)
         app = assessment["decisions"][0]["application_id"]
         self.assertIn("ABAP Cloud", (self.ws / f"migration/{app}/BRIEF.md").read_text().splitlines()[0])
+
+
+
+class CheckpointLoopTests(unittest.TestCase):
+    APP = "ZDEMO_PR_DIALOG"
+
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.ws = lifted(self.folder.name)
+        self.target = self.ws / "migration" / self.APP / "target"
+        checkpoints.plan(self.ws, self.APP, [{"id": "skeleton", "goal": "service and list screen", "screens": True},
+                                             {"id": "validations", "goal": "authorization and messages", "screens": False}])
+
+    def tearDown(self):
+        self.folder.cleanup()
+
+    def build(self, text="v1"):
+        self.target.mkdir(parents=True, exist_ok=True)
+        (self.target / "service.js").write_text(text)
+
+    def gates(self, checkpoint="skeleton", skip=()):
+        for gate, by in (("behavior", "builder"), ("screen-review", "screen-reviewer"),
+                         ("review-a", "reviewer-1"), ("review-b", "reviewer-2"), ("approval", "user")):
+            if gate not in skip:
+                checkpoints.gate(self.ws, self.APP, checkpoint, gate, "pass", by, f"{gate} evidence")
+
+    def test_a_checkpoint_closes_only_after_every_gate_passes_on_the_current_code(self):
+        self.build()
+        self.gates(skip=("approval",))
+        with self.assertRaises(ContractError) as caught:
+            checkpoints.close(self.ws, self.APP, "skeleton")
+        self.assertIn("approval", str(caught.exception))
+        checkpoints.gate(self.ws, self.APP, "skeleton", "approval", "pass", "user", "looks right")
+        closed = checkpoints.close(self.ws, self.APP, "skeleton")
+        self.assertEqual(closed["status"], "closed")
+        self.assertEqual(closed["next"], "validations")
+
+    def test_changing_the_code_makes_earlier_evidence_stale(self):
+        self.build()
+        self.gates()
+        self.build("v2")
+        with self.assertRaises(ContractError) as caught:
+            checkpoints.close(self.ws, self.APP, "skeleton")
+        self.assertIn("stale", str(caught.exception))
+
+    def test_gates_run_in_order_and_a_failure_blocks_later_gates(self):
+        self.build()
+        with self.assertRaises(ContractError):
+            checkpoints.gate(self.ws, self.APP, "skeleton", "review-a", "pass", "reviewer-1", "early")
+        checkpoints.gate(self.ws, self.APP, "skeleton", "behavior", "fail", "builder", "2 tests red")
+        with self.assertRaises(ContractError):
+            checkpoints.gate(self.ws, self.APP, "skeleton", "screen-review", "pass", "screen-reviewer", "x")
+
+    def test_reviews_must_be_independent_of_the_builder_and_each_other(self):
+        self.build()
+        checkpoints.gate(self.ws, self.APP, "skeleton", "behavior", "pass", "builder", "green")
+        checkpoints.gate(self.ws, self.APP, "skeleton", "screen-review", "pass", "screen-reviewer", "same fields")
+        with self.assertRaises(ContractError):
+            checkpoints.gate(self.ws, self.APP, "skeleton", "review-a", "pass", "builder", "self")
+        checkpoints.gate(self.ws, self.APP, "skeleton", "review-a", "pass", "reviewer-1", "ok")
+        with self.assertRaises(ContractError):
+            checkpoints.gate(self.ws, self.APP, "skeleton", "review-b", "pass", "reviewer-1", "same reviewer")
+
+    def test_logic_only_checkpoints_skip_the_screen_review(self):
+        self.build()
+        self.gates()
+        checkpoints.close(self.ws, self.APP, "skeleton")
+        self.build("v2")
+        self.gates("validations", skip=("screen-review",))
+        self.assertEqual(checkpoints.close(self.ws, self.APP, "validations")["next"], None)
+
+    def test_a_missing_tool_closes_as_unverified_not_as_passed(self):
+        self.build()
+        checkpoints.gate(self.ws, self.APP, "skeleton", "behavior", "blocked", "builder", "ABAP Unit needs an SAP system")
+        self.gates(skip=("behavior",))
+        closed = checkpoints.close(self.ws, self.APP, "skeleton")
+        self.assertEqual(closed["status"], "closed-unverified")
+        self.assertEqual(closed["blocked"], ["behavior"])
+
+    def test_approval_comes_from_the_user_or_a_recorded_delegation(self):
+        self.build()
+        self.gates(skip=("approval",))
+        with self.assertRaises(ContractError):
+            checkpoints.gate(self.ws, self.APP, "skeleton", "approval", "pass", "delegated", "agent says ok")
+        checkpoints.delegate(self.ws, [self.APP], "run the rest on your own")
+        checkpoints.gate(self.ws, self.APP, "skeleton", "approval", "pass", "delegated", "within delegation")
+        self.assertEqual(checkpoints.close(self.ws, self.APP, "skeleton")["status"], "closed")
+
+    def test_replanning_keeps_closed_checkpoints(self):
+        self.build()
+        self.gates()
+        checkpoints.close(self.ws, self.APP, "skeleton")
+        with self.assertRaises(ContractError):
+            checkpoints.plan(self.ws, self.APP, [{"id": "other", "goal": "x"}])
+        checkpoints.plan(self.ws, self.APP, [{"id": "skeleton", "goal": "service and list screen", "screens": True},
+                                             {"id": "search", "goal": "search help"}])
+        self.assertEqual([c["id"] for c in checkpoints.status(self.ws)[self.APP]], ["skeleton", "search"])
+
+    def test_lessons_accumulate_for_later_checkpoints(self):
+        checkpoints.lesson(self.ws, "Map MESSAGE E001(ZDEMO) to a 403 with the same text", self.APP)
+        checkpoints.lesson(self.ws, "Prefer released CDS over EBAN reads")
+        lessons = (self.ws / "LESSONS.md").read_text()
+        self.assertIn("ZDEMO_PR_DIALOG", lessons)
+        self.assertEqual(lessons.count("\n- "), 2)
+        pipeline.plan(self.ws)
+        self.assertIn("../../LESSONS.md", (self.ws / f"migration/{self.APP}/BRIEF.md").read_text())
+
+    def test_unknown_applications_and_bad_ids_are_refused(self):
+        with self.assertRaises(ContractError):
+            checkpoints.plan(self.ws, "ZNOPE", [{"id": "a", "goal": "b"}])
+        with self.assertRaises(ContractError):
+            checkpoints.plan(self.ws, self.APP, [{"id": "../x", "goal": "b"}])
+
+
+
+class MCPFlowTests(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.ws = lifted(self.folder.name)
+        mcp_server._demo = True
+
+    def tearDown(self):
+        mcp_server._demo = False
+        self.folder.cleanup()
+
+    def call(self, name, **arguments):
+        return mcp_server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                                  "params": {"name": name, "arguments": {"workspace": str(self.ws), **arguments}}})["result"]
+
+    def test_flow_tools_are_listed_and_never_destructive(self):
+        tools = {t["name"]: t for t in mcp_server.tool_list()}
+        for name in ("corelift_screen_plan", "corelift_record_screen", "corelift_list_stacks", "corelift_choose_stack",
+                     "corelift_checkpoint_plan", "corelift_gate", "corelift_checkpoint_close", "corelift_delegate",
+                     "corelift_record_lesson", "corelift_loop_status"):
+            self.assertIn(name, tools)
+            self.assertFalse(tools[name]["annotations"]["destructiveHint"])
+
+    def test_the_demo_system_has_no_screens_to_capture(self):
+        result = self.call("corelift_screen_plan", transactions=["ZDEMO_PR"], user_statement="yes")
+        self.assertTrue(result["isError"])
+        self.assertIn("demo", result["content"][0]["text"])
+
+    def test_stack_choice_and_a_checkpoint_round_trip(self):
+        listed = self.call("corelift_list_stacks")["structuredContent"]
+        self.assertEqual(listed["default"], "sap-btp-cap")
+        self.assertFalse(self.call("corelift_choose_stack", stack="gcp")["isError"])
+        self.assertIn("Google Cloud", (self.ws / "migration/ZCL_DEMO_NOTES/BRIEF.md").read_text())
+        app = "Z_DEMO_NOTIFY"
+        self.call("corelift_checkpoint_plan", application=app, checkpoints=[{"id": "mailer", "goal": "send notification"}])
+        for gate, by in (("behavior", "builder"), ("review-a", "r1"), ("review-b", "r2"), ("approval", "user")):
+            result = self.call("corelift_gate", application=app, checkpoint="mailer", gate=gate, verdict="pass", by=by, evidence="ok")
+            self.assertFalse(result["isError"], result)
+        closed = self.call("corelift_checkpoint_close", application=app, checkpoint="mailer")["structuredContent"]
+        self.assertEqual(closed["status"], "closed")
+        self.assertEqual(self.call("corelift_loop_status")["structuredContent"]["applications"][app][0]["status"], "closed")
 
 
 if __name__ == "__main__":
