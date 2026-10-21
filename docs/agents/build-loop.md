@@ -16,6 +16,11 @@ Test at these public boundaries; a test that reaches past them breaks on refacto
 | Workspace snapshot and MCP server | `corelift.workspace.snapshot`, `ui/server.mjs` tools and resources | `tests/test_workspace.py`, `ui/tests/` |
 | Host packages | `scripts/build_packages.build`, packaged `scripts/corelift.py` | PackageTests, `scripts/check_release.py` |
 | Agent docs | `scripts/check_agent_docs.problems` | `tests/test_agent_docs.py` |
+| SAP read connector | `corelift.sap.adt.ADTClient`, `allowed(method, path)` against `corelift.sap.mock` | `tests/test_sap.py` ReadOnlyClientTests |
+| Discovery and evidence | `corelift.sap.discover.discover`, `corelift.sap.evidence.build` | DiscoveryTests, EvidenceAndAssessmentTests |
+| Lift pipeline | `corelift.sap.pipeline.lift` and its steps; `python3 -m corelift connect / status / lift` | PipelineTests, ProfileTests |
+| SAP MCP server | `corelift.mcp_server.handle`, `python3 -m corelift mcp` (stdio) | MCPServerTests |
+| Plugin manifests | `.claude-plugin/plugin.json`, root `plugin.json` + `mcp.json`, marketplaces | PackageTests, `scripts/check_schemas.py`, `claude plugin validate .` |
 
 A new connector or plugin surface adds a row here in the same change. If the code you need to test has no seam, that is a design finding: say so in the PR and propose the seam rather than testing internals.
 

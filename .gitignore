@@ -12,3 +12,4 @@ customer-data/
 *.key
 node_modules/
 ui/generated/
+corelift-workspace/

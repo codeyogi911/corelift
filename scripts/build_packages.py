@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-INCLUDED = ("corelift", "schemas", "evidence", "examples", "skills", "docs", "scripts")
+INCLUDED = ("corelift", "schemas", "evidence", "examples", "skills", "agents", "docs", "scripts")
 # Contributor process docs guide agents working on this repository, not plugin users.
 EXCLUDED_PREFIXES = ("docs/agents/", "docs/adr/")
 
@@ -60,25 +60,33 @@ def build(destination, root=ROOT, with_ui=False):
             shutil.copyfile(p, target)
         if host == "codex":
             path, meta = package / "plugin.json", manifest
+        elif host == "claude":
+            path, meta = package / ".claude-plugin" / "plugin.json", json.loads((root / ".claude-plugin" / "plugin.json").read_text())
         else:
             path = package / f".{host}-plugin" / "plugin.json"
             meta = {key: manifest[key] for key in ("name", "version", "description", "author", "license", "homepage") if key in manifest}
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(meta, indent=2) + "\n")
-        if host == "codex" and with_ui:
+        if host == "codex":
+            # SAP tools always; the optional UI workspace server joins the same mcp.json.
+            servers = json.loads((root / "mcp.json").read_text())
             for source in ui_files:
-                target = package / ("mcp.json" if source.name == "codex-mcp.json" else source.relative_to(root))
+                if source.name == "codex-mcp.json":
+                    servers["mcpServers"].update(json.loads(source.read_text())["mcpServers"])
+                    continue
+                target = package / source.relative_to(root)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
+            (package / "mcp.json").write_text(json.dumps(servers, indent=2) + "\n")
         (package / "README.md").write_text(
             f"# CoreLift — {host} local package\n\n"
-            "Python 3.11+, offline only. From this package folder run:\n\n"
-            "```sh\npython3 scripts/corelift.py demo\npython3 scripts/corelift.py rehearse-demo\n```\n\n"
-            "Load `skills/assess-sap-clean-core/SKILL.md` through your host's supported local plugin workflow. "
-            "No installation, hooks or marketplace entry is performed by this package. "
-            "Host runtime loading has not been verified. Every decision is a draft; no SAP connection or BTP deployment exists.\n\n"
-            "See `docs/input-contracts.md`, `docs/sap-decisions.md` and `docs/architecture.md` for scope and evidence. "
-            "The source repository README provides the full development/test workflow. See LICENSE, NOTICE and THIRD_PARTY.md for licensing.\n")
+            "Python 3.11+, no install. Connect your SAP system once, then ask your agent to lift your custom code:\n\n"
+            "```sh\npython3 scripts/corelift.py connect        # or: connect --demo\npython3 scripts/corelift.py demo           # offline synthetic assessment\n```\n\n"
+            + ("The `corelift-sap` MCP server (read-only SAP tools) and the `lift-and-shift-sap` skill do the rest. " if host != "cursor" else
+               "This Cursor package is skills/CLI only; use `python3 scripts/corelift.py lift --workspace <folder>` for a live lift. ")
+            + "Nothing is written to SAP or BTP; drafted target code stays in a local workspace for review.\n\n"
+            "See `docs/sap-connection.md`, `docs/input-contracts.md`, `docs/sap-decisions.md` and `docs/architecture.md`. "
+            "See LICENSE, NOTICE and THIRD_PARTY.md for licensing.\n")
         if host == "codex" and with_ui:
             with (package / "README.md").open("a") as readme:
                 readme.write("\nThis optional package includes a real read-only stdio MCP workspace and root `mcp.json`. Requires Node 22+ and Python 3.11+. No npm install is needed in this built package. The server accepts empty input and serves a bundled UI resource. Codex global sidebar acceptance is unverified. See `docs/workspace.md` for scope and fallback.\n")

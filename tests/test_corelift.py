@@ -199,7 +199,9 @@ class AssessmentTests(unittest.TestCase):
 class BoundaryTests(unittest.TestCase):
     def test_absent_providers_deny_even_approval(self):
         require_capability('offline-assess')
-        for name in ('sap-read','sap-write','deploy','migrate-data','rollback'):
+        require_capability('sap-read', {'system': 'https://sap.example.com'})
+        with self.assertRaises(CapabilityDenied): require_capability('sap-read')
+        for name in ('sap-read', 'sap-write','deploy','migrate-data','rollback','transport','activate'):
             with self.assertRaises(CapabilityDenied): require_capability(name, {'approved':True})
 
     def test_cli_reports_without_overwrite(self):
@@ -262,7 +264,13 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(json.loads(manifest.read_text())['name'], 'corelift')
                 result = subprocess.run([sys.executable,str(package/'scripts/corelift.py'),'demo','--format','json'],capture_output=True,text=True,check=True,env={'PYTHONDONTWRITEBYTECODE':'1','PATH':'/usr/bin:/bin'})
                 outputs.append(json.loads(result.stdout))
-                self.assertFalse((package/'mcp.json').exists())
+            sap = json.loads((dest/'codex/mcp.json').read_text())['mcpServers']['corelift-sap']
+            self.assertEqual(sap['args'], ['${PLUGIN_ROOT}/scripts/corelift.py', 'mcp'])
+            claude = json.loads((dest/'claude/.claude-plugin/plugin.json').read_text())
+            self.assertEqual(claude['mcpServers']['corelift-sap']['args'], ['${CLAUDE_PLUGIN_ROOT}/scripts/corelift.py', 'mcp'])
+            self.assertTrue(claude['userConfig']['sap_password']['sensitive'])
+            self.assertTrue((dest/'claude/agents/sap-migration-engineer.md').is_file())
+            self.assertFalse((dest/'cursor/mcp.json').exists())
             self.assertEqual(outputs[0], outputs[1]);self.assertEqual(outputs[1], outputs[2])
             with self.assertRaises(FileExistsError): build(dest)
 

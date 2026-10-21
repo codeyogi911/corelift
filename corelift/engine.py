@@ -152,9 +152,13 @@ def assess(inventory, evidence, sources):
                 unknowns.append(f"{app_id}: dependency export coverage is incomplete")
         dependency_assessment = []
         for obj, uses in sorted(deps.items()):
+            if obj in apps or obj in datasets:
+                # Customer-owned code/data in this inventory: assessed through
+                # the dependency closure and data plan, not as an SAP API.
+                continue
             record = records.get(obj) if target_match and snapshot_pinned else None
             state = record["state"] if record else "unknown"
-            if record and record["verification"] != "synthetic":
+            if record and record["verification"] not in ("synthetic", "cloudification-pinned"):
                 state = "unknown"
                 unknowns.append(f"{obj}: customer export claims require independent API/pathway verification; provider absent")
             if record and any(use["operation"] not in record["supported_operations"] for use in uses):

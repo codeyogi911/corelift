@@ -1,8 +1,28 @@
 # CoreLift
 
-SAP clean-core migration assistant. **Early prototype**, released under Apache-2.0.
+SAP clean-core migration assistant for coding agents. **Early prototype**, released under Apache-2.0.
 
-This local foundation assesses normalized ECC/S4HANA ABAP exports and produces an evidence-backed, unapproved migration plan. It includes a working synthetic assessment and a two-note in-memory rehearsal. It has no live SAP connector, migration executor or deployment provider.
+Connect your SAP system; agents do the rest. CoreLift's Claude Code and Codex plugins read your custom ABAP code through SAP's ADT services (read-only), classify every SAP dependency against SAP's Cloudification Repository pinned to one commit, assess clean-core options and hand each app to an agent that drafts its ABAP Cloud or BTP target locally for review. Nothing is written to SAP or BTP.
+
+## Quick start
+
+Claude Code:
+
+```sh
+/plugin marketplace add codeyogi911/corelift
+/plugin install corelift@corelift
+```
+
+Codex: `codex plugin marketplace add codeyogi911/corelift`, then install CoreLift from the plugin directory.
+
+Then connect once (or try the fictional demo system) and ask your agent to "lift and shift my SAP custom code":
+
+```sh
+python3 scripts/corelift.py connect          # URL, client, user, hidden password; tested read-only
+python3 scripts/corelift.py connect --demo   # no SAP needed
+```
+
+Claude Code also offers the SAP settings when you enable the plugin. See [connecting SAP and lifting apps](docs/sap-connection.md) for what each step reads and writes, and its boundaries.
 
 ## Run the first slice
 
@@ -52,7 +72,7 @@ python3 dist/cursor/scripts/corelift.py demo
 python3 dist/claude/scripts/corelift.py demo
 ```
 
-Each package contains the same engine, schema, evidence, synthetic fixtures and shared `assess-sap-clean-core` skill. Codex uses a portable root `plugin.json`; Cursor and Claude use their native manifest directories. The default packages remain skills/CLI-only. The optional `--with-ui` build adds a tested read-only MCP assessment workspace to Codex. No host settings or marketplace are modified by building packages.
+The repository root is itself the installable plugin for both hosts (`.claude-plugin/` for Claude Code, root `plugin.json` and `mcp.json` for Codex, with marketplaces in `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`). Built packages contain the same engine, schema, evidence, fixtures and skills. Codex and Claude packages declare the `corelift-sap` MCP server; Cursor stays skills/CLI-only. The optional `--with-ui` build adds a tested read-only MCP assessment workspace to Codex. No host settings or marketplace are modified by building packages.
 A rebuild requires a fresh output folder, for example `--output dist-next`; the builder refuses to overwrite packages.
 
 For a separately authorized local host test, Claude supports `claude --plugin-dir ./dist/claude`; load the skill and ask for the synthetic demo. Codex/Cursor package loading depends on their available local authoring surfaces. Host installation and invocation have not been verified in this foundation. `claude plugin validate ./dist/claude` is a structural check, not a runtime compatibility guarantee.
@@ -71,7 +91,7 @@ Tests verify decisions, graph propagation, target mismatch and missing evidence,
 
 ## Next implementation boundary
 
-Prove one scoped SAP read pathway and full ATC/usage/screen export coverage in an authorized test landscape. Add verified functional replacement and per-operation API evidence before expanding placement decisions. Build/deployment/data migration remain blocked until scoped approval, provider enforcement, checkpoint, rollback and recorded verification exist. No customer connection, upload, credentials/grants, BTP resources, spend, global installation or external publication is authorized by running this prototype.
+Exercise the read-only ADT pathway against an authorized test landscape and add usage (SCMON/SUSG), ATC and screen-behavior reads, ideally through the goscrub ADT backend once merged. Add per-operation remote (C2) API evidence before recommending BTP sidecars from live systems. Build/deployment/data migration remain blocked until scoped approval, provider enforcement, checkpoint, rollback and recorded verification exist. Running this prototype authorizes no SAP writes, BTP resources, spend, global installation or external publication.
 
 ## License and project direction
 

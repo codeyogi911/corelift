@@ -69,7 +69,28 @@ def main(argv=None):
     for command in (demo, real):
         command.add_argument("--output", help="Create a NEW local report folder (never overwrite)")
         command.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    connect = sub.add_parser("connect", help="Connect your SAP system (the only setup step)")
+    connect.add_argument("--url", help="SAP system URL, e.g. https://sap.example.com:44300")
+    connect.add_argument("--client", default=None, help="SAP client (Mandant), e.g. 100")
+    connect.add_argument("--user")
+    connect.add_argument("--ca-file", default="", help="Company CA bundle for TLS")
+    connect.add_argument("--insecure-skip-tls-verify", action="store_true")
+    connect.add_argument("--demo", action="store_true", help="Use the fictional demo system")
+    sub.add_parser("disconnect", help="Forget the saved SAP connection")
+    sub.add_parser("status", help="Show and test the SAP connection")
+    lift = sub.add_parser("lift", help="Discover, assess and plan migration of custom code into a workspace")
+    lift.add_argument("--workspace", required=True)
+    lift.add_argument("--package", action="append", default=[])
+    lift.add_argument("--query")
+    lift.add_argument("--target-edition", default="private", choices=("private", "on-premise", "public"))
+    lift.add_argument("--target-release", default="2025")
+    lift.add_argument("--target-fps", default="FPS01")
+    lift.add_argument("--commit", help="Pin a Cloudification Repository commit")
+    sub.add_parser("mcp", help="Serve the CoreLift SAP tools over MCP stdio")
     args = parser.parse_args(argv)
+    if args.command in ("connect", "disconnect", "status", "lift", "mcp"):
+        from .sap.cli import run
+        return run(args)
     try:
         if args.command == "rehearse-demo":
             print(json.dumps(rehearsal_demo(), indent=2, sort_keys=True))

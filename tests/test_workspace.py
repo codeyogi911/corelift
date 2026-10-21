@@ -39,6 +39,7 @@ class WorkspaceTests(unittest.TestCase):
             destination = build(Path(folder) / 'packages', with_ui=True)
             config = json.loads((destination / 'codex/mcp.json').read_text())
             self.assertEqual(config['mcpServers']['corelift-workspace']['args'], ['${PLUGIN_ROOT}/ui/generated/server.mjs'])
+            self.assertIn('corelift-sap', config['mcpServers'])
             self.assertTrue((destination / 'codex/ui/generated/workspace.html').is_file())
             for host in ('cursor', 'claude'):
                 self.assertFalse((destination / host / 'mcp.json').exists())

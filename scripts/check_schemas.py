@@ -37,6 +37,7 @@ def main():
     assert hashlib.sha256(official_mcp.read_bytes()).hexdigest() == official_mcp.with_suffix(".sha256").read_text().strip()
     Draft202012Validator.check_schema(load(official_mcp))
     Draft202012Validator(load(official_mcp)).validate(load(ROOT / "ui/codex-mcp.json"))
+    Draft202012Validator(load(official_mcp)).validate(load(ROOT / "mcp.json"))
     print("PASS: five contracts, portable manifest and optional MCP config match JSON Schema 2020-12; official schema checksums verified")
 
 

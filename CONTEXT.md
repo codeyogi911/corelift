@@ -25,7 +25,7 @@ An extension that runs on BTP beside the ERP core and reaches it only through en
 _Avoid_: microservice, cloud app
 
 **Connection**:
-A customer-authorized link from CoreLift to one source system, scoped to named operations. Planned; no connection provider exists yet.
+A customer-authorized link from CoreLift to one source system, scoped to named operations. Today: read-only ADT reads, made by the user with `corelift connect` or the host's plugin settings.
 _Avoid_: login, integration, credentials
 
 ## Evidence
@@ -83,7 +83,7 @@ _Avoid_: dry run, simulation, test migration
 ## Execution boundary
 
 **Capability**:
-A named operation CoreLift may perform, such as offline assessment. Every capability other than offline assessment is denied until a provider implements it.
+A named operation CoreLift may perform, such as offline assessment. Offline assessment and public evidence download are open, SAP reads need a system binding from the user's connection, and everything else is denied until a provider implements it.
 _Avoid_: permission, feature
 
 **Provider**:
@@ -101,3 +101,21 @@ _Avoid_: plugin build, distribution
 **Workspace**:
 The read-only view of an assessment shown inside a host or local preview.
 _Avoid_: dashboard, UI app
+
+## Lift and shift
+
+**Lift**:
+The read-only pipeline over one connection: discover custom code, pin API evidence, assess, write migration briefs.
+_Avoid_: scan, import, migration (nothing moves during a lift)
+
+**Lift workspace**:
+The local folder a lift writes (inventory, source, evidence, assessment, briefs, drafted targets). Holds customer source; never committed. Distinct from the read-only assessment Workspace.
+_Avoid_: project, output folder
+
+**Migration brief**:
+The per-application hand-off (`migration/<APP>/BRIEF.md`) telling an agent the disposition, target pattern, dependencies with SAP successors, unknowns and done criteria.
+_Avoid_: ticket, task, prompt
+
+**Shift**:
+An agent drafting one application's target code from its migration brief inside the lift workspace, for human review. Never deployed or written to SAP.
+_Avoid_: migrate, deploy, convert
