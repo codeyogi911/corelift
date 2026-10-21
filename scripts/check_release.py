@@ -16,7 +16,8 @@ def check_files(files):
             raise ValueError(f'symlink in release: {file.name}')
         if file.name in {'.env', 'auth.json'} or file.suffix in {'.pem', '.key'}:
             raise ValueError(f'forbidden release file: {file.name}')
-        text = file.read_text(encoding='utf-8')
+        # Binary files (screenshots) are scanned too: metadata chunks can carry paths.
+        text = file.read_bytes().decode('utf-8', errors='replace')
         if PRIVATE_PATH.search(text) or SECRET.search(text):
             raise ValueError(f'private path or secret-like value in {file.name}')
 

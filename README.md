@@ -1,109 +1,56 @@
 # CoreLift
 
-SAP clean-core migration assistant for coding agents. **Early prototype**, released under Apache-2.0.
+CoreLift helps you move custom SAP code off the ERP core. You connect your SAP system; an AI coding agent (Claude Code or Codex) reads your custom ABAP, works out which apps can move and where, and drafts the new code for you to review.
 
-Connect your SAP system; agents do the rest. CoreLift's Claude Code and Codex plugins read your custom ABAP code through SAP's ADT services (read-only), classify every SAP dependency against SAP's Cloudification Repository pinned to one commit, assess clean-core options and hand each app to an agent that drafts its ABAP Cloud or BTP target locally for review. Nothing is written to SAP or BTP.
+It only reads from SAP. Nothing is ever written, transported or deployed to SAP or BTP. CoreLift is an early prototype, open source under Apache-2.0. So far it has been tested against a simulated SAP system, not a real one; see [what has been verified](docs/validation.md).
 
-## Quick start
+![CoreLift assessment workspace showing eight demo applications and the recommendation for each](.github/assets/workspace.png)
 
-Claude Code:
+*The optional local workspace, showing the bundled demo assessment. See [developing and testing](docs/developer.md#open-the-local-workspace) to open it.*
+
+## 1. Install
+
+**Claude Code**
 
 ```sh
 /plugin marketplace add codeyogi911/corelift
 /plugin install corelift@corelift
 ```
 
-Codex:
+**Codex**
 
 ```sh
 codex plugin marketplace add codeyogi911/corelift
 codex plugin add corelift@corelift
 ```
 
-To update later, run `codex plugin marketplace upgrade corelift` and then `codex plugin add corelift@corelift` again.
+## 2. Try it, or connect your SAP system
 
-Then start your agent in a project folder and ask it to "lift and shift my SAP custom code using the demo system" (no SAP needed), or "...my SAP custom code" once you have connected your own system. When nothing is connected the agent gives you the exact command to run in your terminal; from a clone of this repository it is:
+No SAP system handy? Start your agent in an empty folder and ask:
 
-```sh
-python3 scripts/corelift.py connect          # URL, client, user, hidden password; tested read-only
-python3 scripts/corelift.py connect --demo   # keep the fictional demo connected across sessions
-```
+> lift and shift my SAP custom code using the demo system
 
-Claude Code also offers the SAP settings when you enable the plugin. See [connecting SAP and lifting apps](docs/sap-connection.md) for what each step reads and writes, and its boundaries.
+That uses a fictional SAP system, so you can see the whole flow without any setup.
 
-## Run the first slice
+To use your own system, ask your agent to "lift and shift my SAP custom code". If nothing is connected yet, it gives you one command to run in your terminal. That command asks for your SAP URL, client, user and password (the password is typed hidden), tests the connection read-only and saves it on your machine. Claude Code can also ask for these settings when you enable the plugin.
 
-Python 3.11+; no dependency install, credentials or network required:
+Your SAP user needs ADT display rights. See [connecting SAP](docs/sap-connection.md) for the exact authorizations and settings.
 
-```sh
-git clone https://github.com/codeyogi911/corelift.git
-cd corelift
-python3 -m corelift demo
-python3 -m corelift demo --output reports-demo
-python3 -m corelift rehearse-demo
-```
+## 3. What happens next
 
-`reports-demo` must be a new folder. It contains `assessment.md`, `assessment.json`, and `rehearsal.json`. Use a different folder for each run. JSON includes deterministic input hashes and source revisions.
-Generated reports are local and excluded from Git.
+1. **Discover.** The agent reads the custom code in the packages you choose.
+2. **Assess.** It checks the SAP objects it finds your code using against SAP's public Cloudification Repository and recommends a target for each app: keep it in ERP, keep it with a risk review, move it to ABAP Cloud on the same system, move it to a BTP side-by-side app, rebuild it, retire it, or investigate further.
+3. **Report.** You get a short table of your apps with each recommendation and its main blocker, plus a full `assessment.md`.
+4. **Draft.** For the apps you pick, the agent writes the new target code and a `REVIEW.md` with open questions, all inside a local `corelift-workspace/` folder.
+5. **You review.** You or your architect check the drafts and move them into your own system with your normal transport process.
 
-The fictional purchasing portfolio exercises eight applications: ERP purchasing stays in ERP, request notes are a BTP sidecar candidate, a Dynpro workbench stays transaction-coupled, a wrapper retains internal-object risk, a dependent application inherits that risk, a not-recommended dependency needs rebuilding, incomplete evidence triggers investigation, and an unused report is a retirement candidate. All `SYN_*` APIs are fake; their availability is not a claim about SAP. The rehearsal verifies two fake extension-owned notes, idempotent replay, semantic reconciliation and checkpoint rollback in memory.
+Every recommendation is a candidate for review, not an SAP certification.
 
-For your own explicitly supplied local exports:
+## Learn more
 
-```sh
-python3 -m corelift assess --inventory inventory.json --evidence api-evidence.json --sources sources.json
-```
+- [Connecting SAP and lifting apps](docs/sap-connection.md): what each step reads and writes, and its limits
+- [Developing and testing CoreLift](docs/developer.md): offline demo, local workspace, host packages, running the checks
+- [Architecture](docs/architecture.md) and [SAP decisions](docs/sap-decisions.md)
+- [Contributing](CONTRIBUTING.md) and [security reporting](SECURITY.md)
 
-See [input contracts](docs/input-contracts.md), [SAP decisions](docs/sap-decisions.md) and [architecture](docs/architecture.md). Do not commit customer exports or credentials. Customer assessment requires normalized local metadata and target-pinned API evidence; it is not live application discovery. A report candidate is not SAP certification. ERP core remains ERP; BTP extends it.
-
-## Open the local workspace
-
-Node 22+ and Python 3.11+:
-
-```sh
-npm ci
-npm run build:ui
-npm run preview
-```
-
-Open `http://127.0.0.1:4173/` for the synthetic assessment. The read-only workspace shows connections, applications, clean-core findings, migration stages and verification. Stop with Ctrl-C. Use `npm run preview -- --assessment /absolute/path/assessment.json` to inspect an explicitly selected local report. Imported assertions stay distinct from actual demo checks.
-
-See [workspace setup and Codex package](docs/workspace.md). The actual global-entrypoint tool and MCP App resource are protocol-tested; Codex sidebar acceptance remains unverified.
-
-## Host packages
-
-```sh
-python3 scripts/build_packages.py --output dist
-python3 dist/codex/scripts/corelift.py demo
-python3 dist/cursor/scripts/corelift.py demo
-python3 dist/claude/scripts/corelift.py demo
-```
-
-The repository root is itself the installable plugin for both hosts (`.claude-plugin/` for Claude Code, root `plugin.json` and `mcp.json` for Codex, with marketplaces in `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`). Built packages contain the same engine, schema, evidence, fixtures and skills. Codex and Claude packages declare the `corelift-sap` MCP server; Cursor stays skills/CLI-only. The optional `--with-ui` build adds a tested read-only MCP assessment workspace to Codex. No host settings or marketplace are modified by building packages.
-A rebuild requires a fresh output folder, for example `--output dist-next`; the builder refuses to overwrite packages.
-
-For a separately authorized local host test, Claude supports `claude --plugin-dir ./dist/claude`; load the skill and ask for the synthetic demo. Codex/Cursor package loading depends on their available local authoring surfaces. Host installation and invocation have not been verified in this foundation. `claude plugin validate ./dist/claude` is a structural check, not a runtime compatibility guarantee.
-
-Current contracts were checked against [OpenAI packaging docs](https://developers.openai.com/plugins/build/plugins), [Claude manifest docs](https://code.claude.com/docs/en/plugins-reference), and [Cursor plugin docs](https://cursor.com/docs/reference/plugins) on 2026-10-02. OpenAI's portable schema is vendored with a SHA-256 checksum for repeatable validation. Cursor's native adapter is skills-only; advanced host-specific components will need their own validation. Hooks are optional and are never a safety boundary.
-
-## Verify
-
-```sh
-python3 scripts/verify.py
-```
-
-This runs the same gate as CI: agent docs, Python tests, UI build and tests, JSON Schema checks, package build and release checks. See [contributing](CONTRIBUTING.md) for setup and [AGENTS.md](AGENTS.md) for the build loop.
-
-Tests verify decisions, graph propagation, target mismatch and missing evidence, C1-versus-C2, malformed exports, comment injection, offline side effects, mock atomicity/idempotency/rollback/concurrency, package containment and engine parity. The demo and unit tests have zero network calls. Package credential scanning is a limited guard, not a promise that arbitrary customer exports are sanitized.
-
-## Next implementation boundary
-
-Exercise the read-only ADT pathway against an authorized test landscape and add usage (SCMON/SUSG), ATC and screen-behavior reads, ideally through the goscrub ADT backend once merged. Add per-operation remote (C2) API evidence before recommending BTP sidecars from live systems. Build/deployment/data migration remain blocked until scoped approval, provider enforcement, checkpoint, rollback and recorded verification exist. Running this prototype authorizes no SAP writes, BTP resources, spend, global installation or external publication.
-
-## License and project direction
-
-CoreLift's shared assessment engine, host packages, synthetic examples and tests are open source under [Apache-2.0](LICENSE). See [third-party notices](THIRD_PARTY.md). This is an independent project, not an SAP, OpenAI, Anthropic or Anysphere product; no affiliation, endorsement or certification is claimed. Product names belong to their respective owners.
-
-The open-source foundation is usable on its own for local assessment and review. Optional managed services, hosted collaboration or enterprise support may be explored later; none is implemented or required by this release. CoreLift is a working name.
-
-See [contributing](CONTRIBUTING.md) for development checks and [security reporting](SECURITY.md). Never put credentials, customer exports or proprietary SAP materials in issues or pull requests.
+CoreLift is an independent project, not an SAP, OpenAI or Anthropic product. Never put credentials, customer code or proprietary SAP material in issues or pull requests. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY.md).
