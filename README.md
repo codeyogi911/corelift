@@ -13,13 +13,18 @@ Claude Code:
 /plugin install corelift@corelift
 ```
 
-Codex: `codex plugin marketplace add codeyogi911/corelift`, then install CoreLift from the plugin directory.
+Codex:
 
-Then connect once (or try the fictional demo system) and ask your agent to "lift and shift my SAP custom code":
+```sh
+codex plugin marketplace add codeyogi911/corelift
+codex plugin add corelift@corelift
+```
+
+Then start your agent in a project folder and ask it to "lift and shift my SAP custom code using the demo system" (no SAP needed), or "...my SAP custom code" once you have connected your own system. When nothing is connected the agent gives you the exact command to run in your terminal; from a clone of this repository it is:
 
 ```sh
 python3 scripts/corelift.py connect          # URL, client, user, hidden password; tested read-only
-python3 scripts/corelift.py connect --demo   # no SAP needed
+python3 scripts/corelift.py connect --demo   # keep the fictional demo connected across sessions
 ```
 
 Claude Code also offers the SAP settings when you enable the plugin. See [connecting SAP and lifting apps](docs/sap-connection.md) for what each step reads and writes, and its boundaries.

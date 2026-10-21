@@ -89,6 +89,12 @@ def _records(path):
     return items, hashlib.sha256(data).hexdigest()
 
 
+def _target_state(released, name):
+    """SAP's state for a successor in the target's release file, so drafts need no second lookup."""
+    items = released.get(str(name).upper(), [])
+    return items[0].get("state", "unlisted") if items else "unlisted"
+
+
 def build(inventory, files, commit):
     """Map inventory dependencies onto pinned repository records."""
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
@@ -122,6 +128,7 @@ def build(inventory, files, commit):
         if not match:
             notes[name] = {"found": False, "note": "Not in the pinned Cloudification Repository files: unclassified (treat as internal until SAP or an architect says otherwise)"}
             continue
+        successors = [s.get("objectKey") or s.get("tadirObjName") for s in match.get("successors", [])]
         is_data = match.get("objectType", match.get("tadirObject", "")) in TABLE_TYPES
         ops = ["read"] if is_data else ["call"]
         objects.append({"object": name, "state": state, "contract": "unknown", "remote_pathway": "unknown",
@@ -129,7 +136,7 @@ def build(inventory, files, commit):
                         "supported_operations": ops, "endorsed_operations": []})
         notes[name] = {"found": True, "sap_state": match.get("state"), "object_type": match.get("objectType"),
                        "application_component": match.get("applicationComponent", ""),
-                       "successors": [s.get("objectKey") or s.get("tadirObjName") for s in match.get("successors", [])],
+                       "successors": successors, "successor_states": {s: _target_state(released, s) for s in successors},
                        "successor_concept": match.get("successorConceptName", "")}
     evidence = {"schema_version": "1.0.0", "synthetic": False, "target": inventory["target"],
                 "snapshot_revision": commit, "objects": objects}

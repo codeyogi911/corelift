@@ -17,11 +17,18 @@ Codex:
 
 ```sh
 codex plugin marketplace add codeyogi911/corelift
+codex plugin add corelift@corelift
 ```
 
-Install CoreLift from the plugin directory. Its onboarding skill walks the user through connecting.
+Its onboarding skill walks the user through connecting. To pick up a newer `main`, run `codex plugin marketplace upgrade corelift`, then `codex plugin add corelift@corelift` again. `codex plugin list | grep corelift` should show one enabled CoreLift; a second copy (for example a local marketplace pointing at a clone) starts a second `corelift-sap` server, so remove or disable the one you are not testing.
+
+## Try it on the demo system
+
+In an empty project folder, start `codex` (or Claude Code) and ask: "lift and shift my SAP custom code using the demo system". The agent switches the session to the fictional demo system, lifts package `ZDEMO_PURCHASING` into `corelift-workspace/`, shows a table of four applications and drafts target code with a `REVIEW.md` per application. `codex exec` runs the same prompt non-interactively.
 
 ## Connect
+
+`sap_connection_status` returns `connect_command`, the exact command with the installed plugin path; agents hand it to the user. `<plugin-root>` below is that path's folder.
 
 ```sh
 python3 <plugin-root>/scripts/corelift.py connect        # prompts; password is hidden
@@ -38,7 +45,7 @@ The SAP user needs ADT display rights (`S_ADT_RES`, `S_DEVELOP` activity 03) and
 | Step | Tool | Reads | Writes (workspace only) |
 | --- | --- | --- | --- |
 | discover | `corelift_discover` | SAP via ADT: components, package tree or name search, ABAP source | `inventory.json`, `source/`, `discovery.json` |
-| evidence | `corelift_fetch_evidence` | SAP's public [Cloudification Repository](https://github.com/SAP/abap-atc-cr-cv-s4hc) at one commit | `evidence/`, `api-evidence.json`, `evidence-notes.json` |
+| evidence | `corelift_fetch_evidence` | SAP's public [Cloudification Repository](https://github.com/SAP/abap-atc-cr-cv-s4hc) at one commit | `evidence/`, `api-evidence.json`, `evidence-notes.json` (with each successor's state in the target's release file) |
 | assess | `corelift_assess` | the two files above | `assessment.json`, `assessment.md` |
 | plan | `corelift_plan` | the assessment | `migration/<APP>/BRIEF.md`, `migration/INDEX.json` |
 

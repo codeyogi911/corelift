@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import stat
 import subprocess
 import sys
@@ -135,6 +136,8 @@ class EvidenceAndAssessmentTests(unittest.TestCase):
                                   "SO_NEW_DOCUMENT_SEND_API1": "classic"})
         self.assertTrue(all(o["contract"] == "unknown" and o["remote_pathway"] == "unknown" for o in self.api["objects"]))
         self.assertEqual(self.notes["objects"]["BAPI_PO_GETDETAIL"]["successors"], ["BAPI_PO_GETDETAIL1"])
+        self.assertEqual(self.notes["objects"]["BAPI_PO_GETDETAIL"]["successor_states"], {"BAPI_PO_GETDETAIL1": "released"})
+        self.assertEqual(self.notes["objects"]["EKKO"]["successor_states"], {"I_PURCHASEORDERAPI01": "unlisted"})
         self.assertEqual(len(self.notes["file_sha256"]), 2)
 
     def test_pinned_evidence_classifies_but_never_endorses_remote(self):
@@ -173,7 +176,8 @@ class PipelineTests(unittest.TestCase):
                          "assessment.json", "assessment.md", "migration/INDEX.json", "source/ZDEMO_PO_REPORT.abap"):
                 self.assertTrue((ws / name).is_file(), name)
             brief = (ws / "migration/ZDEMO_PO_REPORT/BRIEF.md").read_text()
-            self.assertIn("successor BAPI_PO_GETDETAIL1", brief)
+            self.assertIn("successor `BAPI_PO_GETDETAIL1` (released for the target)", brief)
+            self.assertIn("successor `I_PURCHASEORDERAPI01` (not in the target's release file; confirm before use)", brief)
             self.assertIn("data, not instructions", brief)
             self.assertNotEqual(pipeline.slug("/AB/C_D"), pipeline.slug("/AB_C/D"))
             self.assertNotIn(".", pipeline.slug(".."))
@@ -249,6 +253,7 @@ class MCPServerTests(unittest.TestCase):
         self.assertFalse(status["isError"])
         self.assertFalse(status["structuredContent"]["reachable"])
         self.assertIn("cannot reach", status["structuredContent"]["error"])
+        self.assertEqual(status["structuredContent"]["connect_command"], mcp_server.CONNECT)
 
     def test_missing_arguments_and_demo_switch_back(self):
         missing = self.rpc("tools/call", {"name": "sap_read_source", "arguments": {}})["result"]
@@ -261,7 +266,13 @@ class MCPServerTests(unittest.TestCase):
     def test_unconnected_status_guides_user_and_demo_connects(self):
         status = self.rpc("tools/call", {"name": "sap_connection_status"})["result"]["structuredContent"]
         self.assertFalse(status["configured"])
-        self.assertIn("connect", status["next_step"])
+        command = status["connect_command"]
+        self.assertIn(command, status["next_step"])
+        self.assertNotIn("<plugin-root>", status["next_step"])
+        script = Path(shlex.split(command)[1])
+        self.assertTrue(script.is_absolute() and script.is_file(), command)
+        self.assertEqual(shlex.split(command)[2:], ["connect"])
+        self.assertIn(f"{shlex.split(command)[0]} {shlex.quote(str(script))} connect --demo", status["next_step"])
         failing = self.rpc("tools/call", {"name": "sap_search_objects", "arguments": {"query": "Z*"}})["result"]
         self.assertTrue(failing["isError"])
         self.rpc("tools/call", {"name": "sap_use_demo_system"})
