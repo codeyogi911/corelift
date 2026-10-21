@@ -46,3 +46,10 @@ Verified 2026-10-21 with Python 3.13 and Node 22; CI covers Python 3.11 and 3.14
 - `corelift lift` ran against the synthetic endpoint with SAP's real Cloudification Repository files at commit `934db1ad2f5c` (2025 FPS01 private-edition file plus classic classifications): four applications, all four SAP dependencies classified.
 - `claude plugin validate` passed on the repository root, the marketplace and the built Claude package. One `claude --plugin-dir` run on the demo system exercised the skill, `corelift_lift` and two migration subagents that drafted ABAP Cloud code and `REVIEW.md` files; it exposed parallel drafting of dependent apps, which the skill now orders.
 - Not exercised: a real SAP system (endpoint shapes, release detection from `/sap/bc/adt/system/components`, authorizations, CSRF expiry), Codex plugin loading, and compiling or testing any drafted target code.
+
+## Agent-driven flow slice, 0.4.0
+
+Verified 2026-10-21 with Python 3.13 and Node 22; CI covers Python 3.11 and 3.14.
+
+- 96 Python tests passed. New ones drive discovery's screen behavior hints and transactions against the synthetic ADT endpoint, the screen-capture provider (denied without the user's statement, bound to the connected system and lifted scope, PNG/JPEG only, no path escape), stack profiles (shipped and workspace profiles, shape validation, briefs following the chosen stack), the checkpoint ledger (gate order, stale evidence after a code change, reviewer independence, blocked gates closing as unverified, delegation, lessons) and the new MCP tools. A test keeps every tool, skill and subagent named in `skills/` and `agents/` real.
+- Not exercised: SAP GUI for HTML on a real system, capturing a screenshot through a host browser, a host running the new skills and subagents end to end, and running any drafted target code's tests. Shopify's Helix article and the MIT-licensed helix-skills repository informed the loop design; no code was copied. Nothing from goscrub was used.

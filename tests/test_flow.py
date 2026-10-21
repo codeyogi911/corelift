@@ -1,12 +1,13 @@
 """Agent-driven flow after a lift: screen capture, target stacks, checkpoint loop."""
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
 
 from corelift import checkpoints, mcp_server, stacks
 from corelift.capabilities import CapabilityDenied
-from corelift.contracts import ContractError
+from corelift.contracts import ROOT, ContractError
 from corelift.sap import mock, pipeline, screens
 from test_sap import COMMIT, cloudification_files, demo_client
 
@@ -328,6 +329,27 @@ class MCPFlowTests(unittest.TestCase):
         closed = self.call("corelift_checkpoint_close", application=app, checkpoint="mailer")["structuredContent"]
         self.assertEqual(closed["status"], "closed")
         self.assertEqual(self.call("corelift_loop_status")["structuredContent"]["applications"][app][0]["status"], "closed")
+
+
+
+class SkillTests(unittest.TestCase):
+    """Skills and subagents name only tools, skills and agents that exist."""
+
+    def test_skills_and_agents_reference_real_tools_skills_and_agents(self):
+        tools = {t["name"] for t in mcp_server.tool_list()}
+        skills = {p.parent.name for p in (ROOT / "skills").glob("*/SKILL.md")}
+        agents = {p.stem for p in (ROOT / "agents").glob("*.md")}
+        for path in sorted((ROOT / "skills").glob("*/SKILL.md")) + sorted((ROOT / "agents").glob("*.md")):
+            text = path.read_text()
+            with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                meta = re.match(r"---\nname: (.+)\ndescription: (.+?)\n", text)
+                self.assertIsNotNone(meta)
+                self.assertEqual(meta[1], path.parent.name if path.name == "SKILL.md" else path.stem)
+                self.assertLessEqual(len(meta[2]), 1024)
+                self.assertEqual(set(re.findall(r"`((?:sap|corelift)_[a-z_]+)`", text)) - tools, set())
+                named = set(re.findall(r"`([a-z]+(?:-[a-z]+)+)` skill", text))
+                self.assertEqual(named - skills, set())
+                self.assertEqual(set(re.findall(r"`([a-z-]+)` subagent", text)) - agents, set())
 
 
 if __name__ == "__main__":

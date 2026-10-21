@@ -42,13 +42,28 @@ The SAP user needs ADT display rights (`S_ADT_RES`, `S_DEVELOP` activity 03) and
 | assess | `corelift_assess` | the two files above | `assessment.json`, `assessment.md` |
 | plan | `corelift_plan` | the assessment | `migration/<APP>/BRIEF.md`, `migration/INDEX.json` |
 
-`corelift_lift` runs all four. In Claude Code the skill then dispatches one `sap-migration-engineer` subagent per app to draft target code in `migration/<APP>/target/` with a `REVIEW.md`. A workspace carries its own `.gitignore` because it holds customer source.
+`corelift_lift` runs all four. A workspace carries its own `.gitignore` because it holds customer source and screenshots.
+
+## After the lift: screens, stack, shift
+
+| Step | Tool | Asks the user | Writes (workspace only) |
+| --- | --- | --- | --- |
+| screens | `corelift_screen_plan`, `corelift_record_screen` | approval to open the listed transactions in display mode | `screens/PLAN.json`, `screens/<TCODE>/*.png`, `screens/INDEX.json` |
+| stack | `corelift_list_stacks`, `corelift_choose_stack` | which target stack (SAP BTP with CAP by default) | `target-stack.json`, `target-stack.md`, rewritten briefs |
+| shift | `corelift_checkpoint_plan`, `corelift_gate`, `corelift_checkpoint_close` | approval per checkpoint, or one delegation (`corelift_delegate`) | `migration/<APP>/target/`, `LOOP.json`, `REVIEW.md`, `LESSONS.md` |
+
+**Screens.** Discovery reads each screen program's modules, authorization objects, messages and locks from its source and lists the transactions in scope. Layouts are not readable over ADT, so with the user's approval the agent opens each transaction in SAP GUI for HTML (`/sap/bc/gui/sap/its/webgui`, which must be active) in the user's own signed-in browser and files a screenshot. CoreLift hands out links only for approved transactions of the lifted scope on the connected system; the browser itself is the host's tool, outside CoreLift's enforcement. Opening a transaction runs its start-up logic, so the skill recommends a development or QA system.
+
+**Stack.** Target stacks are Markdown profiles in `skills/choose-target-stack/stacks/` (SAP BTP with CAP, ABAP Cloud on S/4HANA, AWS, Google Cloud, Azure). A customer adds their own as `<workspace>/stacks/<id>.md` with the same sections. Every profile reaches SAP only through released APIs; the stack never changes a disposition.
+
+**Shift.** Inspired by [Shopify's Helix](https://shopify.engineering/helix): each app is drafted in small checkpoints, and each checkpoint passes behavior (tests), screen review against the reference screenshots (screen checkpoints only), two independent reviews and approval, all on the current code. A code change makes earlier evidence stale; a stack whose tests need SAP (ABAP Unit) closes the checkpoint as `closed-unverified`; accepted corrections go to `LESSONS.md` for later checkpoints. In Claude Code the `sap-migration-engineer` subagent builds and `sap-migration-reviewer` subagents review in fresh contexts. The ledger keeps agents honest about their own evidence; it is local bookkeeping, not tamper-proof.
 
 ## Boundaries
 
 - The ADT client (`corelift/sap/adt.py`) refuses any request outside its read-only allowlist before a socket opens. One allowlisted call is a POST that reads the package tree. Paths with `.`/`..` segments and redirects are refused, so untrusted URIs cannot widen the allowlist and credentials never follow to another host.
 - Nothing is written, locked, activated, transported or deployed in SAP or BTP. `sap-read` is granted only bound to the one system the user connected (`corelift/capabilities.py`); `offline-assess` and `network-evidence` are open; everything else fails closed.
 - Pinned Cloudification evidence (`verification: cloudification-pinned`) classifies objects as released, classic, internal or not-recommended. It carries no remote (C2) contract or endorsed pathway, so a BTP sidecar is never derived from it alone. Objects absent from SAP's files stay unknown.
-- Discovery reads source only: no usage statistics (SCMON/SUSG), ATC results, screen behavior or DDIC details yet. Dependencies are lexical hints. Treat every disposition as a candidate for an architect.
+- `sap-screen-capture` is granted only with the user's own words naming the transactions (`corelift/sap/screens.py` binds it to the connected system and the lifted scope). The demo system has no screens to capture.
+- Discovery reads source only: no usage statistics (SCMON/SUSG), ATC results, screen layouts, flow logic or DDIC details yet. Screen behavior and dependencies are lexical hints. Treat every disposition as a candidate for an architect.
 - This Python connector is a stopgap. The goscrub Go ADT backend is the planned single connector; it should emit the same `inventory.json` contract so the rest of the pipeline is unchanged.
 - Verified against the synthetic ADT endpoint in `corelift/sap/mock.py` and SAP's published repository files. Not yet exercised against a real SAP system.
