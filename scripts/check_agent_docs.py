@@ -23,7 +23,9 @@ def problems(root=ROOT, tracked=None):
     found = []
     for name in tracked:
         path = PurePosixPath(name)
-        if not (root / name).is_file():
+        if name in COMPETING:
+            found.append(f'{name} duplicates AGENTS.md; move its rules into AGENTS.md')
+        if not (path.name == 'CLAUDE.md' or LINKED.search(name)) or not (root / name).is_file():
             continue
         text = (root / name).read_text(encoding='utf-8')
         if path.name == 'CLAUDE.md':
@@ -31,8 +33,6 @@ def problems(root=ROOT, tracked=None):
                 found.append(f'{name} must contain only @AGENTS.md')
             elif (path.parent / 'AGENTS.md').as_posix() not in tracked:
                 found.append(f'{name} points to missing {(path.parent / "AGENTS.md").as_posix()}')
-        if name in COMPETING:
-            found.append(f'{name} duplicates AGENTS.md; move its rules into AGENTS.md')
         if LINKED.search(name):
             for target in LINK.findall(FENCE.sub('', text)):
                 target = target.split('#')[0]
