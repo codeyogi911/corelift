@@ -62,12 +62,10 @@ Current contracts were checked against [OpenAI packaging docs](https://developer
 ## Verify
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
-# Optional developer schema check in a project-local venv:
-python3 -m venv .venv
-.venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python scripts/check_schemas.py
+python3 scripts/verify.py
 ```
+
+This runs the same gate as CI: agent docs, Python tests, UI build and tests, JSON Schema checks, package build and release checks. See [contributing](CONTRIBUTING.md) for setup and [AGENTS.md](AGENTS.md) for the build loop.
 
 Tests verify decisions, graph propagation, target mismatch and missing evidence, C1-versus-C2, malformed exports, comment injection, offline side effects, mock atomicity/idempotency/rollback/concurrency, package containment and engine parity. The demo and unit tests have zero network calls. Package credential scanning is a limited guard, not a promise that arbitrary customer exports are sanitized.
 
