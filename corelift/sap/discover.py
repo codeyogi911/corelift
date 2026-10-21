@@ -19,6 +19,14 @@ DEFAULT_TARGET = {"family": "S4HANA", "edition": "private", "release": "2025", "
 STATIC_CALL = re.compile(r"(?<![A-Z0-9_/])((?:/[A-Z0-9_]+/)?(?:CL|IF)_[A-Z0-9_]+)\s*=>", re.I)
 COUPLING = re.compile(r"\b(?:CALL\s+SCREEN|CALL\s+TRANSACTION|LEAVE\s+TO\s+TRANSACTION|SET\s+SCREEN|MODULE\s+\w+\s+(?:INPUT|OUTPUT))\b", re.I)
 SCREEN = re.compile(r"\bCALL\s+SCREEN\s+(\d+)", re.I)
+TRANSACTION_TYPES = {"TRAN/T", "TRAN"}
+# Screen behavior hints. Flow logic and layout are not readable over this
+# connector, so module names, checks and messages are program-wide hints.
+MODULE = re.compile(r"^\s*MODULE\s+(\w+)\s+(INPUT|OUTPUT)\s*\.", re.I | re.M)
+AUTHORITY = re.compile(r"\bAUTHORITY-CHECK\s+OBJECT\s+'([A-Z0-9_/]+)'", re.I)
+MESSAGE = re.compile(r"\bMESSAGE\s+([EWAX]\d{3}\([A-Z0-9_/]+\))", re.I)
+LOCK = re.compile(r"\bCALL\s+FUNCTION\s+'(ENQUEUE_[A-Z0-9_/]+)'", re.I)
+SELECTION = re.compile(r"^\s*(?:PARAMETERS|SELECT-OPTIONS)\s*:?\s*([A-Z][A-Z0-9_]*)", re.I | re.M)
 MAX_ABAP = 500_000
 
 # Software component releases -> S/4HANA release year. Unknown stays unknown.
@@ -64,8 +72,9 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
     objects = collect(client, packages, query, max_objects)
     tables = sorted({o["name"].upper() for o in objects if o["type"] in DB_TABLE_TYPES})
     code = [o for o in objects if o["type"] in SOURCE_TYPES]
+    transactions = [{"name": o["name"].upper(), "description": o["description"]} for o in objects if o["type"] in TRANSACTION_TYPES]
     skipped = [{"name": o["name"], "type": o["type"], "reason": "object type not read by this connector"}
-               for o in objects if o["type"] not in SOURCE_TYPES and o["type"] not in DB_TABLE_TYPES]
+               for o in objects if o["type"] not in SOURCE_TYPES | DB_TABLE_TYPES | TRANSACTION_TYPES]
     sources, failures = {}, []
     for index, obj in enumerate(code, 1):
         if obj["name"].upper() in sources:
@@ -118,10 +127,7 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
             "transaction_coupled": bool(COUPLING.search(_code_only(text))) or writes_standard,
             "wrapper": False, "coverage_complete": not unresolved,
             "depends_on": depends_on, "datasets": datasets, "dependencies": dependencies, "abap": text})
-        for number in sorted(set(SCREEN.findall(_code_only(text)))):
-            screens.append({"id": f"{name}_{number}", "application_id": name, "technology": "Dynpro",
-                            "pbo": [], "pai": [], "validation": [], "authorization": [], "value_help": [],
-                            "locking": [], "errors": []})
+        screens += program_screens(name, _code_only(text))
     if not applications:
         raise ADTError("no customer code found in scope; check packages/query and display authorizations")
     inventory = {
@@ -132,10 +138,30 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
                       "system_of_record": "source SAP system", "ownership": "extension"} for t in tables]}
     record = {"components": components, "packages": [p.upper() for p in packages], "query": query,
               "objects_in_scope": len(objects), "applications": len(applications), "tables": tables,
+              "transactions": transactions,
               "skipped": skipped, "read_failures": failures,
-              "limitations": ["Usage statistics (SCMON/SUSG), ATC results, screen behavior and DDIC details are not read by this connector yet",
+              "limitations": ["Usage statistics (SCMON/SUSG), ATC results, screen layouts, flow logic and DDIC details are not read by this connector yet",
+                              "Screen behavior (modules, authorization objects, messages, locks) is a program-wide lexical hint, not per-screen flow logic",
                               "Dependencies are lexical hints from source; confirm with SAP ATC before decisions"]}
     return inventory, sources, record
+
+
+def program_screens(name, code):
+    """Dynpro screens one program calls, plus its selection screen 1000."""
+    def unique(pattern, group=1):
+        return sorted({m[group].upper() for m in pattern.finditer(code)})
+    modules = [(m[1].upper(), m[2].upper()) for m in MODULE.finditer(code)]
+    behavior = {"pbo": sorted({n for n, kind in modules if kind == "OUTPUT"}),
+                "pai": sorted({n for n, kind in modules if kind == "INPUT"}),
+                "validation": [f"MESSAGE {m}" for m in unique(MESSAGE)],
+                "authorization": unique(AUTHORITY), "value_help": [], "locking": unique(LOCK), "errors": []}
+    screens = [{"id": f"{name}_{number}", "application_id": name, "technology": "Dynpro", **behavior}
+               for number in sorted(set(SCREEN.findall(code)), key=int)]
+    fields = unique(SELECTION)
+    if fields and not any(s["id"] == f"{name}_1000" for s in screens):
+        screens.append({"id": f"{name}_1000", "application_id": name, "technology": "Dynpro", **behavior,
+                        "pbo": [f"selection screen field {f}" for f in fields] + behavior["pbo"]})
+    return screens
 
 
 def _code_only(text):

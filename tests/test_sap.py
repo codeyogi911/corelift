@@ -75,7 +75,7 @@ class ReadOnlyClientTests(unittest.TestCase):
         self.assertEqual(client.components()["SAP_APPL"], "618")
         names = {o["name"] for o in client.package_contents(mock.PACKAGE)}
         self.assertIn("ZCL_DEMO_NOTES", names)
-        self.assertEqual({o["name"] for o in client.search("ZDEMO_P*")}, {"ZDEMO_PO_REPORT", "ZDEMO_PR_DIALOG"})
+        self.assertEqual({o["name"] for o in client.search("ZDEMO_P*")}, {"ZDEMO_PO_REPORT", "ZDEMO_PR_DIALOG", "ZDEMO_PR"})
         self.assertIn("SELECT * FROM ekko", client.source("/sap/bc/adt/programs/programs/zdemo_po_report"))
 
 
@@ -98,8 +98,35 @@ class DiscoveryTests(unittest.TestCase):
     def test_dialogs_and_standard_writes_are_transaction_coupled(self):
         dialog = self.apps["ZDEMO_PR_DIALOG"]
         self.assertTrue(dialog["transaction_coupled"])
-        self.assertEqual([s["id"] for s in self.inventory["screens"]], ["ZDEMO_PR_DIALOG_100"])
+        self.assertIn("ZDEMO_PR_DIALOG_100", [s["id"] for s in self.inventory["screens"]])
         self.assertFalse(self.apps["ZDEMO_PO_REPORT"]["transaction_coupled"])
+
+    def test_screen_behavior_is_read_from_the_program_source(self):
+        screens = {s["id"]: s for s in self.inventory["screens"]}
+        self.assertEqual(sorted(screens), ["ZDEMO_PO_REPORT_1000", "ZDEMO_PR_DIALOG_100"])
+        dialog = screens["ZDEMO_PR_DIALOG_100"]
+        self.assertEqual(dialog["pbo"], ["STATUS_0100"])
+        self.assertEqual(dialog["pai"], ["USER_COMMAND_0100"])
+        self.assertEqual(dialog["authorization"], ["M_BANF_BSA"])
+        self.assertEqual(dialog["validation"], ["MESSAGE E001(ZDEMO)"])
+        selection = screens["ZDEMO_PO_REPORT_1000"]
+        self.assertEqual(selection["technology"], "Dynpro")
+        self.assertEqual(selection["value_help"], [])
+        self.assertIn("selection screen field P_MAX", selection["pbo"])
+
+    def test_lock_function_modules_are_screen_locking(self):
+        from corelift.sap import discover as module
+        source = ("REPORT zdemo_lock.\nCALL SCREEN 200.\nCALL FUNCTION 'ENQUEUE_EZDEMO_PR'.\n"
+                  "* MESSAGE e999(zx) in a comment is ignored\nMESSAGE w002(zdemo).\n")
+        with patch.object(mock, "OBJECTS", mock.OBJECTS + [("ZDEMO_LOCK", "PROG/P", "/sap/bc/adt/programs/programs/zdemo_lock", "Lock", source)]):
+            inventory, _, _ = module.discover(demo_client(), [mock.PACKAGE])
+        screen = next(s for s in inventory["screens"] if s["id"] == "ZDEMO_LOCK_200")
+        self.assertEqual(screen["locking"], ["ENQUEUE_EZDEMO_PR"])
+        self.assertEqual(screen["validation"], ["MESSAGE W002(ZDEMO)"])
+
+    def test_transactions_in_scope_are_listed_for_screen_capture(self):
+        self.assertEqual(self.record["transactions"], [{"name": "ZDEMO_PR", "description": "Maintain purchase request notes"}])
+        self.assertNotIn("ZDEMO_PR", [s["name"] for s in self.record["skipped"]])
 
     def test_namespaced_sap_objects_are_apis_not_customer_code(self):
         from corelift.sap import discover as module
