@@ -28,6 +28,12 @@ class AgentDocsTests(unittest.TestCase):
                                              'plugins/x/AGENTS.md': '# X\n', 'plugins/x/CLAUDE.md': 'Use pytest.\n'})
             self.assertEqual(problems(root, tracked), ['plugins/x/CLAUDE.md must contain only @AGENTS.md'])
 
+    def test_binary_files_are_skipped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, tracked = repo(directory, {'AGENTS.md': '# Guide\n'})
+            (root / 'logo.png').write_bytes(b'\x89PNG\r\n')
+            self.assertEqual(problems(root, tracked + ['logo.png']), [])
+
     def test_competing_instruction_files_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             root, tracked = repo(directory, {'AGENTS.md': '# Guide\n', '.cursorrules': 'x',

@@ -113,7 +113,7 @@ The local folder a lift writes (inventory, source, evidence, assessment, briefs,
 _Avoid_: project, output folder
 
 **Migration brief**:
-The per-application hand-off (`migration/<APP>/BRIEF.md`) telling an agent the disposition, target pattern, dependencies with SAP successors, unknowns and done criteria.
+The per-application hand-off (`migration/<APP>/BRIEF.md`) telling an agent the disposition, target pattern, dependencies with SAP successors (and whether each successor is released for the target), unknowns and done criteria.
 _Avoid_: ticket, task, prompt
 
 **Reference screenshot**:
