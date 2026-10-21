@@ -15,6 +15,7 @@ class ReleaseCheckTests(unittest.TestCase):
     def test_private_path_inside_binary_metadata_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             image = Path(directory) / 'shot.png'
-            image.write_bytes(b'\x89PNG\r\n\x1a\ntEXtSource/Users/someone/Desktop\x00')
+            # Split so this test file does not itself trip the release scan.
+            image.write_bytes(b'\x89PNG\r\n\x1a\ntEXtSource/' + b'Users' + b'/someone/Desktop\x00')
             with self.assertRaisesRegex(ValueError, 'private path'):
                 check_files([image])
