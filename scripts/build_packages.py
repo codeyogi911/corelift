@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INCLUDED = ("corelift", "schemas", "evidence", "examples", "skills", "docs", "scripts")
 # Contributor process docs guide agents working on this repository, not plugin users.
-EXCLUDED = ("docs/agents", "docs/adr")
+EXCLUDED_PREFIXES = ("docs/agents/", "docs/adr/")
 
 
 def package_files(root):
@@ -18,7 +18,7 @@ def package_files(root):
         if base.is_symlink():
             raise ValueError(f"symlink package root: {name}")
         for p in base.rglob("*"):
-            if p.relative_to(root).as_posix().startswith(tuple(f"{name}/" for name in EXCLUDED)):
+            if p.relative_to(root).as_posix().startswith(EXCLUDED_PREFIXES):
                 continue
             if p.is_symlink():
                 raise ValueError(f"symlink refused: {p.relative_to(root)}")

@@ -9,6 +9,8 @@ npm ci
 python3 -m pip install -r requirements-dev.txt   # in a project-local venv if you prefer
 python3 scripts/verify.py           # full gate, identical to CI
 python3 scripts/verify.py --quick   # agent docs and Python tests
+python3 -m corelift demo            # synthetic assessment
+python3 -m corelift rehearse-demo   # synthetic in-memory rehearsal
 ```
 
 Agents and humans follow the same build loop in [AGENTS.md](AGENTS.md); domain terms are in [CONTEXT.md](CONTEXT.md). Use a fresh package output directory. Test uncertain evidence, target-version mismatch, imported provenance and failure paths; preserve the distinction between mock verification, protocol validation and actual host/SAP acceptance. New dependencies require redistribution-license review. Contributions intentionally submitted for inclusion are under Apache-2.0 unless explicitly stated otherwise.

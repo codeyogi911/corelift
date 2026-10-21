@@ -42,10 +42,25 @@ class AgentDocsTests(unittest.TestCase):
                                              'CONTEXT.md': '# Context\n'})
             self.assertEqual(problems(root, tracked), ['AGENTS.md links to missing docs/agents/gone.md'])
 
+    def test_links_must_stay_inside_repository_and_fences_are_ignored(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, tracked = repo(directory, {'AGENTS.md': '[hosts](/etc/hosts) [up](../outside.md)\n\n```md\n[sample](docs/x.md)\n```\n'})
+            (root.parent / 'outside.md').write_text('x')
+            try:
+                self.assertEqual(problems(root, tracked), ['AGENTS.md links outside the repository: /etc/hosts',
+                                                           'AGENTS.md links outside the repository: ../outside.md'])
+            finally:
+                (root.parent / 'outside.md').unlink()
+
+    def test_nested_claude_md_needs_sibling_agents_md(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, tracked = repo(directory, {'AGENTS.md': '# Guide\n', 'plugins/x/CLAUDE.md': '@AGENTS.md\n'})
+            self.assertEqual(problems(root, tracked), ['plugins/x/CLAUDE.md points to missing plugins/x/AGENTS.md'])
+
     def test_agents_md_line_budget(self):
         with tempfile.TemporaryDirectory() as directory:
             root, tracked = repo(directory, {'AGENTS.md': 'line\n' * 151})
-            self.assertEqual(problems(root, tracked), ['AGENTS.md has 151 lines; keep it under 150 and disclose detail behind pointers'])
+            self.assertEqual(problems(root, tracked), ['AGENTS.md has 151 lines; keep it at most 150 and disclose detail behind pointers'])
 
     def test_contributor_process_docs_stay_out_of_packages(self):
         root = Path(__file__).resolve().parent.parent

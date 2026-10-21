@@ -8,14 +8,14 @@ This file is the only agent instruction file. `CLAUDE.md` exists solely as `@AGE
 
 Every change runs this loop. A step is done only when its completion criterion holds; `scripts/verify.py` is the observable that closes the loop.
 
-1. **Spec.** Find the issue or spec ([issue tracker](docs/agents/issue-tracker.md)). Done when you can quote its acceptance criteria. If there are none, write them into the PR body first and treat that as the spec.
+1. **Spec.** Find the issue or spec ([issue tracker](docs/agents/issue-tracker.md)). Done when you can quote its acceptance criteria. If there are none, open a draft PR now with them under **Spec** and treat that as the spec.
 2. **Language.** Read [CONTEXT.md](CONTEXT.md) and use its terms in names, tests and docs. Done when every new domain word is either already in the glossary or added to it in this change.
 3. **Seams.** Name the public seams you will test (see the [seam list](docs/agents/build-loop.md#seams)). Done when they are listed in the PR body.
 4. **Red, then green.** One vertical slice at a time: one failing test at a seam, watch it go red, write the least code that turns it green, then the next slice. Expected values come from fixtures, the spec or a worked example, never recomputed the way the code computes them. Run `python3 scripts/verify.py --quick` after each slice.
 5. **Verify.** `python3 scripts/verify.py`. Done when it prints `GREEN: full gate passed`. CI runs the same command, so green locally means green in CI except for the Python matrix.
-6. **Review.** Two separate axes, ideally as two subagents: **Standards** (this file, [CONTRIBUTING.md](CONTRIBUTING.md), the smell baseline) and **Spec** (the acceptance criteria from step 1). Refactor here, not during step 4. Prompts are in the [review section](docs/agents/build-loop.md#review).
+6. **Review.** Two separate axes, each run by its own subagent in a fresh context: **Standards** (this file, [CONTRIBUTING.md](CONTRIBUTING.md), the smell baseline) and **Spec** (the acceptance criteria from step 1). Refactor here, not during step 4. Prompts are in the [review section](docs/agents/build-loop.md#review).
 7. **Iterate.** Each finding either becomes a fix that re-enters step 4 or a one-line reason in the PR body. Done when verify is green after the last fix and no finding is unanswered.
-8. **Ship.** Open a PR against `main` using the template. Done when CI is green and the PR body has spec, seams, verify output and review results.
+8. **Ship.** Merge the PR yourself (squash). There is no human review gate; the step 6 agent review is the review. Done when CI is green on the head commit, the PR body has spec, seams, verify output and both review axes with no blocking finding open, and the PR is merged.
 
 For a bug, step 4 becomes the [diagnosis loop](docs/agents/build-loop.md#bugs): a red-capable command first, hypotheses second.
 

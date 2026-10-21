@@ -18,7 +18,8 @@ def steps(packages, quick):
     if quick:
         return
     npm = shutil.which('npm') or 'npm'
-    if not (ROOT / 'node_modules').is_dir():
+    installed = ROOT / 'node_modules/.package-lock.json'
+    if not installed.is_file() or installed.stat().st_mtime < (ROOT / 'package-lock.json').stat().st_mtime:
         yield 'npm ci', [npm, 'ci']
     yield 'ui build', [npm, 'run', 'build:ui']
     yield 'ui tests', [npm, 'run', 'test:ui']

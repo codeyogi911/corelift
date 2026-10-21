@@ -25,7 +25,7 @@ An extension that runs on BTP beside the ERP core and reaches it only through en
 _Avoid_: microservice, cloud app
 
 **Connection**:
-A customer-authorized link from CoreLift to one source system, scoped to named operations.
+A customer-authorized link from CoreLift to one source system, scoped to named operations. Planned; no connection provider exists yet.
 _Avoid_: login, integration, credentials
 
 ## Evidence

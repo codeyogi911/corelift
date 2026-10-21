@@ -9,6 +9,7 @@ MAX_LINES = 150
 COMPETING = ('.cursorrules', '.windsurfrules', 'GEMINI.md', '.github/copilot-instructions.md')
 LINKED = re.compile(r'(?:^|/)(?:AGENTS|CONTEXT)\.md$|^docs/(?:agents|adr)/.*\.md$')
 LINK = re.compile(r'\]\(([^)\s]+)\)')
+FENCE = re.compile(r'^```.*?^```', re.M | re.S)
 
 
 def tracked_files(root=ROOT):
@@ -22,18 +23,29 @@ def problems(root=ROOT, tracked=None):
     found = []
     for name in tracked:
         path = PurePosixPath(name)
-        if path.name == 'CLAUDE.md' and (root / name).read_text().strip() != '@AGENTS.md':
-            found.append(f'{name} must contain only @AGENTS.md')
+        if not (root / name).is_file():
+            continue
+        text = (root / name).read_text(encoding='utf-8')
+        if path.name == 'CLAUDE.md':
+            if text.strip() != '@AGENTS.md':
+                found.append(f'{name} must contain only @AGENTS.md')
+            elif (path.parent / 'AGENTS.md').as_posix() not in tracked:
+                found.append(f'{name} points to missing {(path.parent / "AGENTS.md").as_posix()}')
         if name in COMPETING:
             found.append(f'{name} duplicates AGENTS.md; move its rules into AGENTS.md')
         if LINKED.search(name):
-            for target in LINK.findall((root / name).read_text()):
+            for target in LINK.findall(FENCE.sub('', text)):
                 target = target.split('#')[0]
-                if target and '://' not in target and not target.startswith('mailto:') and not (root / path.parent / target).exists():
+                if not target or '://' in target or target.startswith('mailto:'):
+                    continue
+                resolved = (root / path.parent / target).resolve()
+                if target.startswith('/') or not resolved.is_relative_to(root.resolve()):
+                    found.append(f'{name} links outside the repository: {target}')
+                elif not resolved.exists():
                     found.append(f'{name} links to missing {target}')
-    lines = len((root / 'AGENTS.md').read_text().splitlines())
+    lines = len((root / 'AGENTS.md').read_text(encoding='utf-8').splitlines())
     if lines > MAX_LINES:
-        found.append(f'AGENTS.md has {lines} lines; keep it under {MAX_LINES} and disclose detail behind pointers')
+        found.append(f'AGENTS.md has {lines} lines; keep it at most {MAX_LINES} and disclose detail behind pointers')
     return found
 
 
