@@ -2,9 +2,9 @@
 
 The client is the only code that talks to a customer SAP system. It speaks the
 same HTTP endpoints SAP's own Eclipse ADT uses, and it refuses every request
-that is not on a small read-only allowlist. Two allowlisted requests are POSTs
-(repository tree reads need them); they never carry a body that changes the
-system. Credentials stay in this object and are never returned or logged.
+that is not on a small read-only allowlist. One allowlisted request is a POST
+(the repository tree read needs it); it never carries a body that changes
+the system. Credentials stay in this object and are never returned or logged.
 """
 import base64
 import http.cookiejar
@@ -30,7 +30,7 @@ READ_ONLY = [
     ("GET", r"/sap/bc/adt/functions/groups/[^/]+/includes/[^/]+/source/main"),
 ]
 
-# ADT object type -> source URI suffix, for types whose code CoreLift reads.
+# ADT object types whose ABAP source CoreLift reads.
 SOURCE_TYPES = {"PROG/P", "PROG/I", "CLAS/OC", "INTF/OI", "FUGR/FF", "FUGR/I"}
 
 
@@ -43,6 +43,8 @@ class ReadOnlyViolation(ADTError):
 
 
 def allowed(method, path):
+    if any(segment in (".", "..") for segment in path.split("/")):
+        return False
     return any(method == m and re.fullmatch(p, path) for m, p in READ_ONLY)
 
 
@@ -84,9 +86,19 @@ class ADTClient:
             headers["x-csrf-token"] = self._csrf or self._fetch_csrf()
         req = urllib.request.Request(url, method=method, headers=headers, data=b"" if method == "POST" else None)
         try:
+            return self._send(req, path)
+        except _StaleToken:
+            # SAP session expired during a long lift: fetch a new token once.
+            headers["x-csrf-token"] = self._fetch_csrf()
+            return self._send(urllib.request.Request(url, method=method, headers=headers, data=b""), path)
+
+    def _send(self, req, path):
+        try:
             with self._opener.open(req, timeout=self.timeout) as response:
                 body = response.read(MAX_RESPONSE + 1)
         except urllib.error.HTTPError as error:
+            if error.code == 403 and req.get_method() == "POST" and error.headers.get("x-csrf-token", "").lower() == "required":
+                raise _StaleToken() from None
             if error.code in (401, 403):
                 raise ADTError(f"SAP refused the request ({error.code}); check user, password, client and ADT authorizations (S_ADT_RES, S_DEVELOP display)") from None
             if error.code == 404:
@@ -99,7 +111,8 @@ class ADTClient:
         return body.decode("utf-8", errors="replace")
 
     def _fetch_csrf(self):
-        req = urllib.request.Request(self.base + "/sap/bc/adt/discovery" + (f"?sap-client={self.client}" if self.client else ""),
+        query = "?" + urllib.parse.urlencode({"sap-client": self.client}) if self.client else ""
+        req = urllib.request.Request(self.base + "/sap/bc/adt/discovery" + query,
                                      headers={"Authorization": self._auth, "x-csrf-token": "fetch", "Accept": "*/*"})
         try:
             with self._opener.open(req, timeout=self.timeout) as response:
@@ -160,6 +173,10 @@ class ADTClient:
         if not path.endswith("/source/main"):
             path += "/source/main"
         return self.request("GET", path, accept="text/plain")
+
+
+class _StaleToken(Exception):
+    pass
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):

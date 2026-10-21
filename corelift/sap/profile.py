@@ -17,6 +17,10 @@ FIELDS = ("url", "client", "user", "password", "verify_tls", "ca_file")
 DEMO = "demo"
 
 
+class NotConnected(Exception):
+    pass
+
+
 def home():
     return Path(os.environ.get("CORELIFT_HOME") or Path.home() / ".corelift")
 
@@ -80,11 +84,11 @@ def public(settings):
 
 def client_for(settings):
     if not settings:
-        raise LookupError("No SAP system connected. Run `corelift connect` (or set the plugin's SAP settings).")
+        raise NotConnected("No SAP system connected. Run `corelift connect` (or set the plugin's SAP settings).")
     if settings["url"] == DEMO:
-        from .mock import shared_demo_url
-        return ADTClient(shared_demo_url(), "DEMO", "demo")
+        from . import mock
+        return ADTClient(mock.shared_demo_url(), mock.USER, mock.PASSWORD)
     if not settings["user"] or not settings["password"]:
-        raise LookupError("SAP user and password are required; run `corelift connect` again.")
+        raise NotConnected("SAP user and password are required; run `corelift connect` again.")
     return ADTClient(settings["url"], settings["user"], settings["password"], settings["client"],
                      settings["verify_tls"], settings["ca_file"] or None)

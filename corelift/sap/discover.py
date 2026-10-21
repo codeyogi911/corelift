@@ -11,9 +11,12 @@ import re
 from ..engine import scan_abap
 from .adt import SOURCE_TYPES, ADTError
 
-CUSTOMER = re.compile(r"^(?:Z|Y|/[A-Z0-9_]+/)", re.I)
-TABLE_TYPES = {"TABL/DT", "TABL/DS", "TABL"}
-STATIC_CALL = re.compile(r"\b((?:CL|IF)_[A-Z0-9_]+|/[A-Z0-9_]+/(?:CL|IF)_[A-Z0-9_]+)\s*=>", re.I)
+# Z/Y names are customer code. Namespaced /XYZ/ objects can be SAP's or the
+# customer's, so they count as customer code only when the user scoped them in.
+CUSTOMER = re.compile(r"^[ZY]", re.I)
+DB_TABLE_TYPES = {"TABL/DT", "TABL/DS", "TABL"}
+DEFAULT_TARGET = {"family": "S4HANA", "edition": "private", "release": "2025", "fps": "FPS01"}
+STATIC_CALL = re.compile(r"(?<![A-Z0-9_/])((?:/[A-Z0-9_]+/)?(?:CL|IF)_[A-Z0-9_]+)\s*=>", re.I)
 COUPLING = re.compile(r"\b(?:CALL\s+SCREEN|CALL\s+TRANSACTION|LEAVE\s+TO\s+TRANSACTION|SET\s+SCREEN|MODULE\s+\w+\s+(?:INPUT|OUTPUT))\b", re.I)
 SCREEN = re.compile(r"\bCALL\s+SCREEN\s+(\d+)", re.I)
 MAX_ABAP = 500_000
@@ -46,8 +49,9 @@ def collect(client, packages=(), query=None, max_objects=500):
     if query or not packages:
         for pattern in ([query] if query else ["Z*", "Y*"]):
             for node in client.search(pattern, max_results=max_objects):
-                found[(node["type"], node["name"].upper())] = node
-    objects = [o for o in found.values() if CUSTOMER.match(o["name"])]
+                if query or CUSTOMER.match(node["name"]):
+                    found[(node["type"], node["name"].upper())] = node
+    objects = list(found.values())
     objects.sort(key=lambda o: (o["name"].upper(), o["type"]))
     if len(objects) > max_objects:
         raise ADTError(f"{len(objects)} objects in scope exceed max_objects={max_objects}; narrow the packages or query")
@@ -58,12 +62,15 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
     components = client.components()
     source = source_system(components, source_override)
     objects = collect(client, packages, query, max_objects)
-    tables = sorted({o["name"].upper() for o in objects if o["type"] in TABLE_TYPES})
+    tables = sorted({o["name"].upper() for o in objects if o["type"] in DB_TABLE_TYPES})
     code = [o for o in objects if o["type"] in SOURCE_TYPES]
     skipped = [{"name": o["name"], "type": o["type"], "reason": "object type not read by this connector"}
-               for o in objects if o["type"] not in SOURCE_TYPES and o["type"] not in TABLE_TYPES]
+               for o in objects if o["type"] not in SOURCE_TYPES and o["type"] not in DB_TABLE_TYPES]
     sources, failures = {}, []
     for index, obj in enumerate(code, 1):
+        if obj["name"].upper() in sources:
+            failures.append({"name": obj["name"], "type": obj["type"], "reason": "same name as another object in scope; read once"})
+            continue
         if progress:
             progress(f"reading {obj['name']} ({index}/{len(code)})")
         try:
@@ -74,10 +81,12 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
         sources[obj["name"].upper()] = text[:MAX_ABAP]
     owned = set(sources) | set(tables)
     applications, screens = [], []
+    seen = set()
     for obj in code:
         name = obj["name"].upper()
-        if name not in sources:
+        if name not in sources or name in seen:
             continue
+        seen.add(name)
         text = sources[name]
         deps, unresolved = {}, False
         for finding in scan_abap(text):
@@ -117,7 +126,7 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
         raise ADTError("no customer code found in scope; check packages/query and display authorizations")
     inventory = {
         "schema_version": "1.0.0", "synthetic": False, "source_system": source,
-        "target": target or {"family": "S4HANA", "edition": "private", "release": "2025", "fps": "FPS01"},
+        "target": target or dict(DEFAULT_TARGET),
         "applications": applications, "screens": screens,
         "datasets": [{"id": t, "classification": "unknown", "owner": "unknown",
                       "system_of_record": "source SAP system", "ownership": "extension"} for t in tables]}

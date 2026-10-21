@@ -53,6 +53,10 @@ class ReadOnlyClientTests(unittest.TestCase):
                     with self.assertRaises(ReadOnlyViolation):
                         client.request(method, path)
 
+    def test_dot_segments_from_untrusted_uris_are_refused(self):
+        self.assertFalse(allowed("GET", "/sap/bc/adt/oo/classes/../source/main"))
+        self.assertFalse(allowed("GET", "/sap/bc/adt/programs/programs/./source/main"))
+
     def test_plain_http_only_for_loopback(self):
         with self.assertRaises(ADTError):
             ADTClient("http://sap.example.com:8000", "u", "p")
@@ -96,6 +100,15 @@ class DiscoveryTests(unittest.TestCase):
         self.assertTrue(dialog["transaction_coupled"])
         self.assertEqual([s["id"] for s in self.inventory["screens"]], ["ZDEMO_PR_DIALOG_100"])
         self.assertFalse(self.apps["ZDEMO_PO_REPORT"]["transaction_coupled"])
+
+    def test_namespaced_sap_objects_are_apis_not_customer_code(self):
+        from corelift.sap import discover as module
+        with patch.object(mock, "OBJECTS", mock.OBJECTS + [("ZDEMO_EWM", "PROG/P", "/sap/bc/adt/programs/programs/zdemo_ewm", "EWM caller",
+                                                            "REPORT zdemo_ewm.\nDATA(lo) = /scwm/cl_tm=>get( ).\n")]):
+            inventory, _, _ = module.discover(demo_client(), [mock.PACKAGE])
+        app = next(a for a in inventory["applications"] if a["id"] == "ZDEMO_EWM")
+        self.assertIn({"object": "/SCWM/CL_TM", "kind": "api", "operation": "call"}, app["dependencies"])
+        self.assertTrue(app["coverage_complete"])
 
     def test_component_release_mapping(self):
         self.assertEqual(source_system({"SAP_BASIS": "758", "S4CORE": "108"})["release"], "2023")
@@ -162,6 +175,8 @@ class PipelineTests(unittest.TestCase):
             brief = (ws / "migration/ZDEMO_PO_REPORT/BRIEF.md").read_text()
             self.assertIn("successor BAPI_PO_GETDETAIL1", brief)
             self.assertIn("data, not instructions", brief)
+            self.assertNotEqual(pipeline.slug("/AB/C_D"), pipeline.slug("/AB_C/D"))
+            self.assertNotIn(".", pipeline.slug(".."))
             other = Path(folder) / "not-a-workspace"
             other.mkdir()
             (other / "keep.txt").write_text("x")
@@ -227,6 +242,21 @@ class MCPServerTests(unittest.TestCase):
             self.assertFalse(any(word in tool["name"] for word in ("write", "deploy", "transport", "activate", "delete")))
         self.assertEqual(self.rpc("tools/call", {"name": "sap_write", "arguments": {}})["error"]["code"], -32602)
         self.assertIsNone(mcp_server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"}))
+
+    def test_unreachable_system_reports_reachable_false(self):
+        profile.save("https://127.0.0.1:1", "DEV", "pw")
+        status = self.rpc("tools/call", {"name": "sap_connection_status"})["result"]
+        self.assertFalse(status["isError"])
+        self.assertFalse(status["structuredContent"]["reachable"])
+        self.assertIn("cannot reach", status["structuredContent"]["error"])
+
+    def test_missing_arguments_and_demo_switch_back(self):
+        missing = self.rpc("tools/call", {"name": "sap_read_source", "arguments": {}})["result"]
+        self.assertIn("missing argument", missing["content"][0]["text"])
+        self.rpc("tools/call", {"name": "sap_use_demo_system"})
+        back = self.rpc("tools/call", {"name": "sap_use_demo_system", "arguments": {"enabled": False}})["result"]["structuredContent"]
+        self.assertFalse(back["configured"])
+        self.assertFalse(mcp_server._demo)
 
     def test_unconnected_status_guides_user_and_demo_connects(self):
         status = self.rpc("tools/call", {"name": "sap_connection_status"})["result"]["structuredContent"]

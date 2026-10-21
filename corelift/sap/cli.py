@@ -8,6 +8,7 @@ from ..capabilities import CapabilityDenied, require_capability
 from ..contracts import ContractError
 from . import pipeline, profile
 from .adt import ADTClient, ADTError
+from .discover import DEFAULT_TARGET
 
 
 def _ask(label, default=""):
@@ -26,6 +27,9 @@ def connect(args):
     user = args.user or _ask("SAP user", saved.get("user", ""))
     password = os.environ.get("CORELIFT_SAP_PASSWORD") or getpass.getpass("SAP password (hidden): ")
     verify = not args.insecure_skip_tls_verify
+    if not verify:
+        print("Warning: TLS verification is off; use only for a sandbox system.", file=sys.stderr)
+    require_capability("sap-read", {"system": url})
     print("Checking the connection (read-only)...")
     connection = ADTClient(url, user, password, client, verify, args.ca_file or None)
     connection.ping()
@@ -47,21 +51,25 @@ def run(args):
         if args.command == "disconnect":
             print("Forgot the saved SAP connection." if profile.forget() else "No saved SAP connection.")
             return 0
-        require_capability("sap-read")
         settings = profile.load()
+        if args.command == "status" and not settings:
+            print(json.dumps(profile.public(settings), indent=2))
+            return 1
+        if not settings:
+            profile.client_for(settings)  # raises NotConnected with the next step
+        require_capability("sap-read", {"system": settings["url"]})
         if args.command == "status":
             info = profile.public(settings)
-            if settings:
-                info["components"] = profile.client_for(settings).components()
+            info["components"] = profile.client_for(settings).components()
             print(json.dumps(info, indent=2))
-            return 0 if settings else 1
+            return 0
         require_capability("network-evidence")
-        target = {"family": "S4HANA", "edition": args.target_edition, "release": args.target_release, "fps": args.target_fps}
+        target = {**DEFAULT_TARGET, "edition": args.target_edition, "release": args.target_release, "fps": args.target_fps}
         result = pipeline.lift(args.workspace, profile.client_for(settings), args.package, args.query, target, args.commit,
                                progress=lambda m: print(m, file=sys.stderr))
         print(json.dumps(result, indent=2))
         return 0
-    except (ADTError, ContractError, CapabilityDenied, LookupError, PermissionError, OSError, ValueError) as error:
+    except (ADTError, ContractError, CapabilityDenied, profile.NotConnected, PermissionError, OSError, ValueError) as error:
         print(f"CoreLift: {error}", file=sys.stderr)
         return 2
     except (KeyboardInterrupt, EOFError):

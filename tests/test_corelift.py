@@ -199,8 +199,9 @@ class AssessmentTests(unittest.TestCase):
 class BoundaryTests(unittest.TestCase):
     def test_absent_providers_deny_even_approval(self):
         require_capability('offline-assess')
-        require_capability('sap-read')
-        for name in ('sap-write','deploy','migrate-data','rollback','transport','activate'):
+        require_capability('sap-read', {'system': 'https://sap.example.com'})
+        with self.assertRaises(CapabilityDenied): require_capability('sap-read')
+        for name in ('sap-read', 'sap-write','deploy','migrate-data','rollback','transport','activate'):
             with self.assertRaises(CapabilityDenied): require_capability(name, {'approved':True})
 
     def test_cli_reports_without_overwrite(self):

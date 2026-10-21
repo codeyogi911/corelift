@@ -46,8 +46,8 @@ The SAP user needs ADT display rights (`S_ADT_RES`, `S_DEVELOP` activity 03) and
 
 ## Boundaries
 
-- The ADT client (`corelift/sap/adt.py`) refuses any request outside its read-only allowlist before a socket opens. Two allowlisted calls are POSTs that read the repository tree. Redirects are refused so credentials never follow to another host.
-- Nothing is written, locked, activated, transported or deployed in SAP or BTP. Capabilities other than `offline-assess`, `sap-read` and `network-evidence` fail closed (`corelift/capabilities.py`).
+- The ADT client (`corelift/sap/adt.py`) refuses any request outside its read-only allowlist before a socket opens. One allowlisted call is a POST that reads the package tree. Paths with `.`/`..` segments and redirects are refused, so untrusted URIs cannot widen the allowlist and credentials never follow to another host.
+- Nothing is written, locked, activated, transported or deployed in SAP or BTP. `sap-read` is granted only bound to the one system the user connected (`corelift/capabilities.py`); `offline-assess` and `network-evidence` are open; everything else fails closed.
 - Pinned Cloudification evidence (`verification: cloudification-pinned`) classifies objects as released, classic, internal or not-recommended. It carries no remote (C2) contract or endorsed pathway, so a BTP sidecar is never derived from it alone. Objects absent from SAP's files stay unknown.
 - Discovery reads source only: no usage statistics (SCMON/SUSG), ATC results, screen behavior or DDIC details yet. Dependencies are lexical hints. Treat every disposition as a candidate for an architect.
 - This Python connector is a stopgap. The goscrub Go ADT backend is the planned single connector; it should emit the same `inventory.json` contract so the rest of the pipeline is unchanged.

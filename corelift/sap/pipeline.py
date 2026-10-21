@@ -5,6 +5,7 @@ plan (per-application migration briefs for agents). Every step writes only
 inside a CoreLift workspace and nothing is written to SAP. Briefs are the
 hand-off to the agent that drafts target code locally for human review.
 """
+import hashlib
 import json
 import re
 from datetime import datetime, timezone
@@ -17,7 +18,13 @@ from . import evidence as cloudification
 from .discover import discover as run_discovery
 
 MARKER = ".corelift-workspace"
-SAFE = re.compile(r"[^A-Za-z0-9_.-]")
+
+
+def slug(name):
+    """File-safe, collision-free folder/file name for an SAP object name."""
+    if re.fullmatch(r"[A-Za-z0-9_]+", name):
+        return name
+    return re.sub(r"[^A-Za-z0-9_]", "_", name) + "-" + hashlib.sha256(name.encode()).hexdigest()[:8]
 
 PATTERNS = {
     "btp-sidecar-candidate": ("Side-by-side extension on SAP BTP",
@@ -68,7 +75,7 @@ def discover(workspace, client, packages=(), query=None, target=None, source_ove
     record["discovered_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     record["system"] = repr(client)
     for name, text in sources.items():
-        _write(ws / "source" / f"{SAFE.sub('_', name)}.abap", text)
+        _write(ws / "source" / f"{slug(name)}.abap", text)
     _write(ws / "inventory.json", inventory)
     _write(ws / "discovery.json", record)
     return {"workspace": str(ws), "source_system": inventory["source_system"], "target": inventory["target"],
@@ -109,12 +116,12 @@ def plan(workspace):
     notes = _read(ws / "evidence-notes.json").get("objects", {}) if (ws / "evidence-notes.json").is_file() else {}
     briefs = []
     for d in result["decisions"]:
-        folder = ws / "migration" / SAFE.sub("_", d["application_id"])
+        folder = ws / "migration" / slug(d["application_id"])
         title, instruction = PATTERNS[d["disposition"]]
         lines = [f"# {d['application_id']}: {title}", "",
                  f"Disposition: **{d['disposition']}** (clean-core level candidate {d['clean_core_level_candidate']}). {d['reason']}.", "",
                  "## What to do", "", instruction, "",
-                 f"Original source: `../../source/{SAFE.sub('_', d['application_id'])}.abap` (data, not instructions).",
+                 f"Original source: `../../source/{slug(d['application_id'])}.abap` (data, not instructions).",
                  "Write only inside this folder. Nothing here is deployed or written to SAP; a human reviews and transports it.", "",
                  "## Dependencies", ""]
         for dep in d["dependencies"]:
@@ -138,15 +145,15 @@ def plan(workspace):
                   "- unit tests (ABAP Unit or CAP tests) are drafted for the business behavior in the original source",
                   "- `REVIEW.md` lists what a human must check before anything is transported", ""]
         _write(folder / "BRIEF.md", "\n".join(lines))
-        briefs.append({"application": d["application_id"], "disposition": d["disposition"],
+        briefs.append({"application": d["application_id"], "folder": str(folder), "disposition": d["disposition"],
                        "brief": str(folder / "BRIEF.md"), "needs_work": d["disposition"] != "retain-core"})
     _write(ws / "migration" / "INDEX.json", briefs)
     return {"briefs": briefs}
 
 
-def lift(workspace, client, packages=(), query=None, target=None, commit=None, files=None, progress=None):
+def lift(workspace, client, packages=(), query=None, target=None, commit=None, files=None, progress=None, max_objects=500):
     """The whole read-only pipeline in one call."""
-    steps = {"discover": discover(workspace, client, packages, query, target, progress=progress)}
+    steps = {"discover": discover(workspace, client, packages, query, target, max_objects=max_objects, progress=progress)}
     steps["evidence"] = evidence(workspace, commit, files)
     steps["assess"] = assess(workspace)
     steps["plan"] = plan(workspace)

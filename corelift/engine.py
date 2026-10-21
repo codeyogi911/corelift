@@ -158,7 +158,7 @@ def assess(inventory, evidence, sources):
                 continue
             record = records.get(obj) if target_match and snapshot_pinned else None
             state = record["state"] if record else "unknown"
-            if record and record["verification"] == "exported-unverified":
+            if record and record["verification"] not in ("synthetic", "cloudification-pinned"):
                 state = "unknown"
                 unknowns.append(f"{obj}: customer export claims require independent API/pathway verification; provider absent")
             if record and any(use["operation"] not in record["supported_operations"] for use in uses):
