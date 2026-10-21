@@ -1,6 +1,6 @@
 # Developing and testing CoreLift
 
-Detail for contributors and evaluators. The [README](../README.md) covers install and first use; [AGENTS.md](../AGENTS.md) holds the agent build loop.
+Detail for contributors and evaluators. The [README](../README.md) covers install and first use; [AGENTS.md](https://github.com/codeyogi911/corelift/blob/main/AGENTS.md) holds the agent build loop.
 
 ## Run the first slice
 
@@ -63,7 +63,7 @@ Current contracts were checked against [OpenAI packaging docs](https://developer
 python3 scripts/verify.py
 ```
 
-This runs the same gate as CI: agent docs, Python tests, UI build and tests, JSON Schema checks, package build and release checks. See [contributing](../CONTRIBUTING.md) for setup and [AGENTS.md](../AGENTS.md) for the build loop.
+This runs the same gate as CI: agent docs, Python tests, UI build and tests, JSON Schema checks, package build and release checks. See [contributing](https://github.com/codeyogi911/corelift/blob/main/CONTRIBUTING.md) for setup and [AGENTS.md](https://github.com/codeyogi911/corelift/blob/main/AGENTS.md) for the build loop.
 
 Tests verify decisions, graph propagation, target mismatch and missing evidence, C1-versus-C2, malformed exports, comment injection, offline side effects, mock atomicity/idempotency/rollback/concurrency, package containment and engine parity. The demo and unit tests have zero network calls. Package credential scanning is a limited guard, not a promise that arbitrary customer exports are sanitized.
 
@@ -77,4 +77,4 @@ CoreLift's shared assessment engine, host packages, synthetic examples and tests
 
 The open-source foundation is usable on its own for local assessment and review. Optional managed services, hosted collaboration or enterprise support may be explored later; none is implemented or required by this release. CoreLift is a working name.
 
-See [contributing](../CONTRIBUTING.md) for development checks and [security reporting](../SECURITY.md). Never put credentials, customer exports or proprietary SAP materials in issues or pull requests.
+See [contributing](https://github.com/codeyogi911/corelift/blob/main/CONTRIBUTING.md) for development checks and [security reporting](https://github.com/codeyogi911/corelift/blob/main/SECURITY.md). Never put credentials, customer exports or proprietary SAP materials in issues or pull requests.
