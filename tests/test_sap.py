@@ -25,7 +25,9 @@ def cloudification_files(folder):
     release = {"formatVersion": "1", "objectReleaseInfo": [
         {"tadirObject": "TABL", "tadirObjName": "EKKO", "objectType": "TABL", "objectKey": "EKKO",
          "state": "notToBeReleased", "successors": [{"objectKey": "I_PURCHASEORDERAPI01"}]},
-        {"tadirObject": "TABL", "tadirObjName": "EBAN", "objectType": "TABL", "objectKey": "EBAN", "state": "notToBeReleased"},
+        {"tadirObject": "TABL", "tadirObjName": "EBAN", "objectType": "TABL", "objectKey": "EBAN", "state": "notToBeReleased",
+         "successors": [{"objectKey": "SYN_PR_LEGACY_API"}]},
+        {"tadirObject": "DDLS", "tadirObjName": "SYN_PR_LEGACY_API", "objectType": "DDLS", "objectKey": "SYN_PR_LEGACY_API", "state": "deprecated"},
         {"tadirObject": "FUNC", "tadirObjName": "BAPI_PO_GETDETAIL1", "objectType": "FUNC", "objectKey": "BAPI_PO_GETDETAIL1", "state": "released"}]}
     classic = {"formatVersion": "2", "objectClassifications": [
         {"tadirObject": "FUNC", "tadirObjName": "BAPI_PO_GETDETAIL", "objectType": "FUNC", "objectKey": "BAPI_PO_GETDETAIL",
@@ -138,6 +140,7 @@ class EvidenceAndAssessmentTests(unittest.TestCase):
         self.assertEqual(self.notes["objects"]["BAPI_PO_GETDETAIL"]["successors"], ["BAPI_PO_GETDETAIL1"])
         self.assertEqual(self.notes["objects"]["BAPI_PO_GETDETAIL"]["successor_states"], {"BAPI_PO_GETDETAIL1": "released"})
         self.assertEqual(self.notes["objects"]["EKKO"]["successor_states"], {"I_PURCHASEORDERAPI01": "unlisted"})
+        self.assertEqual(self.notes["objects"]["EBAN"]["successor_states"], {"SYN_PR_LEGACY_API": "deprecated"})
         self.assertEqual(len(self.notes["file_sha256"]), 2)
 
     def test_pinned_evidence_classifies_but_never_endorses_remote(self):
@@ -178,6 +181,8 @@ class PipelineTests(unittest.TestCase):
             brief = (ws / "migration/ZDEMO_PO_REPORT/BRIEF.md").read_text()
             self.assertIn("successor `BAPI_PO_GETDETAIL1` (released for the target)", brief)
             self.assertIn("successor `I_PURCHASEORDERAPI01` (not in the target's release file; confirm before use)", brief)
+            dialog = (ws / "migration/ZDEMO_PR_DIALOG/BRIEF.md").read_text()
+            self.assertIn("successor `SYN_PR_LEGACY_API` (SAP: deprecated for the target; confirm before use)", dialog)
             self.assertIn("data, not instructions", brief)
             self.assertNotEqual(pipeline.slug("/AB/C_D"), pipeline.slug("/AB_C/D"))
             self.assertNotIn(".", pipeline.slug(".."))
@@ -269,10 +274,10 @@ class MCPServerTests(unittest.TestCase):
         command = status["connect_command"]
         self.assertIn(command, status["next_step"])
         self.assertNotIn("<plugin-root>", status["next_step"])
-        script = Path(shlex.split(command)[1])
-        self.assertTrue(script.is_absolute() and script.is_file(), command)
-        self.assertEqual(shlex.split(command)[2:], ["connect"])
-        self.assertIn(f"{shlex.split(command)[0]} {shlex.quote(str(script))} connect --demo", status["next_step"])
+        python, script, *rest = shlex.split(command)
+        self.assertTrue(Path(script).is_absolute() and Path(script).is_file(), command)
+        self.assertEqual(rest, ["connect"])
+        self.assertIn(f"{python} {shlex.quote(script)} connect --demo", status["next_step"])
         failing = self.rpc("tools/call", {"name": "sap_search_objects", "arguments": {"query": "Z*"}})["result"]
         self.assertTrue(failing["isError"])
         self.rpc("tools/call", {"name": "sap_use_demo_system"})

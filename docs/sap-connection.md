@@ -28,7 +28,7 @@ In an empty project folder, start `codex` (or Claude Code) and ask: "lift and sh
 
 ## Connect
 
-`sap_connection_status` returns `connect_command`, the exact command with the installed plugin path; agents hand it to the user. `<plugin-root>` below is that path's folder.
+`sap_connection_status` returns `connect_command`, the exact command with the installed plugin path; agents hand it to the user. This deliberately shows the host the plugin's install folder (which the host chose and already loads skills from); it never contains the password or connection file contents. `<plugin-root>` below is that path's folder.
 
 ```sh
 python3 <plugin-root>/scripts/corelift.py connect        # prompts; password is hidden

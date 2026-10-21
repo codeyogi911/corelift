@@ -20,6 +20,8 @@ codex plugin marketplace add codeyogi911/corelift
 codex plugin add corelift@corelift
 ```
 
+To update later, run `codex plugin marketplace upgrade corelift` and then `codex plugin add corelift@corelift` again.
+
 Then start your agent in a project folder and ask it to "lift and shift my SAP custom code using the demo system" (no SAP needed), or "...my SAP custom code" once you have connected your own system. When nothing is connected the agent gives you the exact command to run in your terminal; from a clone of this repository it is:
 
 ```sh

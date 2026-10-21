@@ -22,6 +22,7 @@ RELEASE_STATE = {"released": "released", "deprecated": "classic",
                  "notToBeReleased": "internal", "notToBeReleasedStable": "internal"}
 CLASSIC_STATE = {"classicAPI": "classic", "noAPI": "not-recommended"}
 TABLE_TYPES = {"TABL", "VIEW", "DDLS", "STOB"}
+RELEASED, UNLISTED = "released", "unlisted"  # successor states recorded in evidence notes
 
 
 def files_for(target):
@@ -89,10 +90,15 @@ def _records(path):
     return items, hashlib.sha256(data).hexdigest()
 
 
+def _release_record(released, name):
+    """The first record for name in the target's release file with a state CoreLift maps, or None."""
+    return next((item for item in released.get(str(name).upper(), []) if item.get("state") in RELEASE_STATE), None)
+
+
 def _target_state(released, name):
     """SAP's state for a successor in the target's release file, so drafts need no second lookup."""
-    items = released.get(str(name).upper(), [])
-    return items[0].get("state", "unlisted") if items else "unlisted"
+    record = _release_record(released, name)
+    return record["state"] if record else UNLISTED
 
 
 def build(inventory, files, commit):
@@ -115,11 +121,8 @@ def build(inventory, files, commit):
                 wanted.setdefault(dep["object"], set()).add(dep["kind"])
     objects, notes = [], {}
     for name in sorted(wanted):
-        match, state = None, None
-        for item in released.get(name, []):
-            if item.get("state") in RELEASE_STATE:
-                match, state = item, RELEASE_STATE[item["state"]]
-                break
+        match = _release_record(released, name)
+        state = RELEASE_STATE[match["state"]] if match else None
         if not match:
             for item in classic.get(name, []):
                 if item.get("state") in CLASSIC_STATE:

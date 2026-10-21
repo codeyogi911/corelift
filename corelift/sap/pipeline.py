@@ -109,12 +109,12 @@ def assess(workspace):
     return {"dispositions": counts, "report": str(ws / "assessment.md")}
 
 
-def _successor(name, state):
-    if state == "released":
+def _successor_label(name, state):
+    if state == cloudification.RELEASED:
         return f"`{name}` (released for the target)"
-    if state == "unlisted":
+    if state == cloudification.UNLISTED:
         return f"`{name}` (not in the target's release file; confirm before use)"
-    return f"`{name}` (SAP: {state} in the target's release file)" if state else f"`{name}`"
+    return f"`{name}` (SAP: {state} for the target; confirm before use)" if state else f"`{name}`"
 
 
 def plan(workspace):
@@ -135,7 +135,7 @@ def plan(workspace):
         for dep in d["dependencies"]:
             note = notes.get(dep["object"], {})
             states = note.get("successor_states", {})
-            successor = ", ".join(_successor(name, states.get(name)) for name in note.get("successors") or []) \
+            successor = ", ".join(_successor_label(name, states.get(name)) for name in note.get("successors") or []) \
                 or note.get("successor_concept") or ""
             lines.append(f"- `{dep['object']}`: {dep['state']}" + (f" (SAP: {note['sap_state']})" if note.get("sap_state") else "")
                          + (f"; successor {successor}" if successor else "")
