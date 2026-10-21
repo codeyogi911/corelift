@@ -11,7 +11,7 @@
     {
       "name": "corelift",
       "source": "./",
-      "description": "Connect your SAP system and let agents lift custom ABAP apps to clean core: read-only discovery, pinned SAP API evidence, assessment and drafted ABAP Cloud/BTP target code.",
+      "description": "Connect your SAP system and let agents lift custom ABAP apps to clean core: read-only discovery, reference screenshots, pinned SAP API evidence, assessment, and target code drafted on the stack you choose through gated checkpoints.",
       "category": "development"
     }
   ]

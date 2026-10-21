@@ -20,6 +20,10 @@ Test at these public boundaries; a test that reaches past them breaks on refacto
 | Discovery and evidence | `corelift.sap.discover.discover`, `corelift.sap.evidence.build` | DiscoveryTests, EvidenceAndAssessmentTests |
 | Lift pipeline | `corelift.sap.pipeline.lift` and its steps; `python3 -m corelift connect / status / lift` | PipelineTests, ProfileTests |
 | SAP MCP server | `corelift.mcp_server.handle`, `python3 -m corelift mcp` (stdio) | MCPServerTests |
+| Screen capture | `corelift.sap.screens.plan / record`, `corelift.sap.discover.program_screens` | `tests/test_flow.py` ScreenCaptureTests, `tests/test_sap.py` DiscoveryTests |
+| Target stacks | `corelift.stacks.profiles / choose`, `corelift.sap.pipeline.plan` | TargetStackTests |
+| Checkpoint loop | `corelift.checkpoints.plan / gate / close / delegate / lesson` | CheckpointLoopTests |
+| Skills and subagents | `skills/*/SKILL.md`, `agents/*.md` against the MCP tool list | SkillTests, MCPFlowTests |
 | Plugin manifests | `.claude-plugin/plugin.json`, root `plugin.json` + `mcp.json`, marketplaces | PackageTests, `scripts/check_schemas.py`, `claude plugin validate .` |
 
 A new connector or plugin surface adds a row here in the same change. If the code you need to test has no seam, that is a design finding: say so in the PR and propose the seam rather than testing internals.

@@ -83,7 +83,7 @@ _Avoid_: dry run, simulation, test migration
 ## Execution boundary
 
 **Capability**:
-A named operation CoreLift may perform, such as offline assessment. Offline assessment and public evidence download are open, SAP reads need a system binding from the user's connection, and everything else is denied until a provider implements it.
+A named operation CoreLift may perform, such as offline assessment. Offline assessment and public evidence download are open, SAP reads need a system binding from the user's connection, screen capture needs the user's approval of named transactions, and everything else is denied until a provider implements it.
 _Avoid_: permission, feature
 
 **Provider**:
@@ -116,6 +116,34 @@ _Avoid_: project, output folder
 The per-application hand-off (`migration/<APP>/BRIEF.md`) telling an agent the disposition, target pattern, dependencies with SAP successors (and whether each successor is released for the target), unknowns and done criteria.
 _Avoid_: ticket, task, prompt
 
+**Reference screenshot**:
+A screenshot of one transaction of the source system, taken in display mode with the user's approval, that a target UI is reviewed against.
+_Avoid_: screen capture (the step), mockup
+
+**Target stack**:
+Where an application's side-by-side code is drafted, described by a stack profile: SAP BTP with CAP by default, ABAP Cloud, AWS, Google Cloud, Azure or a customer's own. It never changes a disposition; an on-stack choice drafts side-by-side candidates as ABAP Cloud.
+_Avoid_: platform, cloud, target (the SAP release)
+
+**Stack profile**:
+The Markdown file describing one target stack in fixed sections (When it fits, Building blocks, Calling SAP, Tests, Done when).
+_Avoid_: template, preset
+
+**Checkpoint**:
+One small, reviewable step of a shift, named in a few words and closed only when its gates hold on the current code.
+_Avoid_: milestone, task, stage (stages belong to the migration plan)
+
+**Gate**:
+One verdict a checkpoint needs: behavior, screen review, two independent reviews and approval. A code change makes it stale; a missing tool leaves it blocked, never passed. Recorded by agents in a local ledger, not tamper-proof.
+_Avoid_: check, step
+
+**Delegation**:
+The user's recorded words letting agents approve checkpoints of named applications.
+_Avoid_: autopilot, auto-approve
+
+**Lesson**:
+An accepted correction from a checkpoint, kept in the workspace's `LESSONS.md` for later checkpoints and apps.
+_Avoid_: memory, note
+
 **Shift**:
-An agent drafting one application's target code from its migration brief inside the lift workspace, for human review. Never deployed or written to SAP.
+An agent drafting one application's target code from its migration brief on the chosen target stack, checkpoint by checkpoint, inside the lift workspace for human review. Never deployed or written to SAP.
 _Avoid_: migrate, deploy, convert

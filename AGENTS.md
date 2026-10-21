@@ -1,6 +1,6 @@
 # CoreLift agent guide
 
-CoreLift helps SAP customers move custom apps off the ERP core. It ships as host plugins (Claude Code, Codex, Cursor) built from one shared engine, skill set and schema set. The product goal: the user connects their SAP system and approves; agents do everything else. Today SAP access is read-only (ADT reads bound to the user's own connection); every write capability fails closed until a provider exists.
+CoreLift helps SAP customers move custom apps off the ERP core. It ships as host plugins (Claude Code, Codex, Cursor) built from one shared engine, skill set and schema set. The product goal: the user connects their SAP system and approves; agents do everything else. Today SAP access is read-only ADT reads bound to the user's own connection, plus approved reference screenshots taken in the user's browser ([ADR 0001](docs/adr/0001-screen-capture-through-sap-gui-for-html.md)); every write capability fails closed until a provider exists.
 
 This file is the only agent instruction file. `CLAUDE.md` exists solely as `@AGENTS.md` so Claude Code loads it. Put new rules here or in a doc this file points to; `scripts/check_agent_docs.py` enforces it.
 
