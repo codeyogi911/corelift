@@ -20,7 +20,7 @@ codex plugin marketplace add codeyogi911/corelift
 codex plugin add corelift@corelift
 ```
 
-Its onboarding skill walks the user through connecting. To pick up a newer `main`, run `codex plugin marketplace upgrade corelift`, then `codex plugin add corelift@corelift` again. `codex plugin list | grep corelift` should show one enabled CoreLift; a second copy (for example a local marketplace pointing at a clone) starts a second `corelift-sap` server, so remove or disable the one you are not testing.
+Its onboarding skill walks the user through connecting. To pick up a newer `main`, run `codex plugin marketplace upgrade corelift`, then `codex plugin add corelift@corelift` again. `codex plugin list | grep corelift` should show one enabled CoreLift; with a second copy (for example a local marketplace pointing at a clone) Codex silently serves the tools from whichever copy registered `corelift-sap` first, even if you disable the other with `-c`. `codex mcp get corelift-sap` shows which copy that is; remove the one you are not testing with `codex plugin remove`.
 
 ## Try it on the demo system
 
