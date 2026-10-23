@@ -14,4 +14,4 @@ Generated bundles must be distributed with their notices. Do not remove notices 
 
 ## SAP references and visual assets
 
-SAP guidance is linked to its public original sources. CoreLift does not bundle gated SAP documentation, SAP customer code, proprietary API catalogs or SAP artwork. Every `SYN_*` fixture and ABAP example is fictional. The interface uses original text/CSS and system fonts, with no copied brand images or externally hosted assets.
+SAP guidance is linked to its public original sources. CoreLift does not bundle gated SAP documentation, SAP customer code, proprietary API catalogs or SAP artwork. Every `SYN_*` fixture and ABAP example is fictional. The interface uses original text/CSS and system fonts, with no copied brand images or externally hosted assets. The plugin icon in `assets/` is original artwork: `logo.svg` is its source and the PNGs are rendered from it.

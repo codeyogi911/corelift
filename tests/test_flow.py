@@ -219,6 +219,25 @@ class TargetStackTests(unittest.TestCase):
         self.assertFalse(index["ZCL_DEMO_NOTES"]["follows_stack"])
         self.assertTrue(index["ZDEMO_PO_REPORT"]["follows_stack"])
 
+    def test_each_disposition_names_its_target(self):
+        expected = {"retain-on-stack-candidate": ("Target: on-stack ABAP Cloud on S/4HANA.", False),
+                    "retain-with-risk-review": ("Target: on-stack ABAP Cloud on S/4HANA.", False),
+                    "retire-candidate": ("Target: none; draft only the retirement checklist.", False),
+                    "retain-core": ("Target: none; the app stays in the ERP core.", False),
+                    "rebuild-candidate": ("Target stack: SAP BTP with CAP", True),
+                    "investigate": ("Target stack: SAP BTP with CAP", True),
+                    "btp-sidecar-candidate": ("Target stack: SAP BTP with CAP", True)}
+        assessment = json.loads((self.ws / "assessment.json").read_text())
+        app = assessment["decisions"][0]["application_id"]
+        for disposition, (line, follows) in expected.items():
+            with self.subTest(disposition=disposition):
+                assessment["decisions"][0]["disposition"] = disposition
+                (self.ws / "assessment.json").write_text(json.dumps(assessment))
+                pipeline.plan(self.ws)
+                self.assertIn(line, (self.ws / f"migration/{app}/BRIEF.md").read_text())
+                index = {e["application"]: e for e in json.loads((self.ws / "migration/INDEX.json").read_text())}
+                self.assertEqual(index[app]["follows_stack"], follows)
+
     def test_an_on_stack_choice_keeps_side_by_side_candidates_in_abap_cloud(self):
         stacks.choose(self.ws, "abap-cloud")
         assessment = json.loads((self.ws / "assessment.json").read_text())

@@ -55,8 +55,10 @@ def follows_stack(disposition):
 def target_line(disposition, stack):
     if disposition in ON_STACK:
         return f"Target: on-stack ABAP Cloud on S/4HANA. The chosen stack ({stack['name']}) is for side-by-side work and does not apply here."
-    if disposition in NO_TARGET:
-        return "Target: none; no target code is drafted for this app."
+    if disposition == "retire-candidate":
+        return "Target: none; draft only the retirement checklist."
+    if disposition == "retain-core":
+        return "Target: none; the app stays in the ERP core."
     return (f"Target stack: {stack['name']} (`../../target-stack.md`)" + ("" if stack["chosen_at"] else ", the default until the user chooses") + ". "
             f"Draft on {stack['name']} following `../../target-stack.md`.")
 
