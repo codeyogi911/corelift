@@ -134,7 +134,8 @@ def screen_plan(args):
         raise ContractError("the demo system has no SAP GUI for HTML; screenshots need a real system")
     _client()  # raises NotConnected with the next step
     approval = {"system": settings["url"], "transactions": list(args.get("transactions", [])),
-                "programs": dict(args.get("programs") or {}), "statement": str(args.get("user_statement", ""))}
+                "programs": dict(args.get("programs") or {}), "accept_unclear": list(args.get("accept_unclear") or []),
+                "statement": str(args.get("user_statement", ""))}
     return screens.plan(_workspace(args), settings["url"], settings["client"], approval)
 
 
@@ -211,9 +212,11 @@ TOOLS = [
     ("corelift_screen_plan", "After the user approves, get SAP GUI for HTML links to open the named transactions in display mode for reference screenshots.",
      {**WS, "transactions": {"type": "array", "items": {"type": "string"}, "description": "Transactions from discovery.json the user approved"},
       "programs": {"type": "object", "additionalProperties": {"type": "string"},
-                   "description": "Transaction -> program it starts, as you matched it; transactions whose start-up changes data get no link"},
+                   "description": "Transaction -> screen program it opens (from discovery.json screen_startup), required for each"},
+      "accept_unclear": {"type": "array", "items": {"type": "string"},
+                         "description": "Programs with an unclear start-up verdict the user approved opening anyway"},
       "user_statement": {"type": "string", "description": "The user's own words approving the capture"}},
-     ["workspace", "transactions", "user_statement"], LOCAL, screen_plan),
+     ["workspace", "transactions", "programs", "user_statement"], LOCAL, screen_plan),
     ("corelift_record_screen", "File one reference screenshot of a planned transaction and the fields, actions and messages seen on it.",
      {**WS, "transaction": {"type": "string"}, "image": {"type": "string", "description": "Absolute path of the PNG or JPEG screenshot"},
       "application": {"type": "string", "description": "Application id the screen belongs to, if known"},

@@ -22,7 +22,7 @@ def lifted(folder):
 
 
 def approval(transactions=("ZDEMO_PR",), system=SYSTEM):
-    return {"system": system, "transactions": list(transactions),
+    return {"system": system, "transactions": list(transactions), "programs": {"ZDEMO_PR": "ZDEMO_PR_DIALOG"},
             "statement": "yes, capture ZDEMO_PR in display mode"}
 
 
@@ -59,10 +59,23 @@ class ScreenCaptureTests(unittest.TestCase):
         discovery["screen_startup"]["ZDEMO_PR_DIALOG"] = {"verdict": "changes-data", "runs_on_open": [], "effects": ["COMMIT WORK"]}
         (self.ws / "discovery.json").write_text(json.dumps(discovery))
         with self.assertRaises(ContractError) as caught:
-            screens.plan(self.ws, SYSTEM, "100", {**approval(), "programs": {"ZDEMO_PR": "ZDEMO_PR_DIALOG"}})
+            screens.plan(self.ws, SYSTEM, "100", approval())
         self.assertIn("COMMIT WORK", str(caught.exception))
-        result = screens.plan(self.ws, SYSTEM, "100", approval())
-        self.assertEqual(result["captures"][0]["start_up"], "unknown program; read its start-up code before opening")
+
+    def test_every_transaction_needs_a_judged_program(self):
+        for programs in ({}, {"ZDEMO_PR": "ZNOT_A_SCREEN_PROGRAM"}):
+            with self.subTest(programs=programs), self.assertRaises(ContractError):
+                screens.plan(self.ws, SYSTEM, "100", {**approval(), "programs": programs})
+        self.assertFalse((self.ws / "screens/PLAN.json").exists())
+
+    def test_an_unclear_start_up_opens_only_when_the_user_accepted_it(self):
+        discovery = json.loads((self.ws / "discovery.json").read_text())
+        discovery["screen_startup"]["ZDEMO_PR_DIALOG"] = {"verdict": "unclear", "runs_on_open": [], "effects": ["CALL FUNCTION Z_X"]}
+        (self.ws / "discovery.json").write_text(json.dumps(discovery))
+        with self.assertRaises(ContractError):
+            screens.plan(self.ws, SYSTEM, "100", approval())
+        result = screens.plan(self.ws, SYSTEM, "100", {**approval(), "accept_unclear": ["ZDEMO_PR_DIALOG"]})
+        self.assertEqual(result["captures"][0]["start_up"], "unclear")
 
     def test_record_copies_a_real_image_into_the_workspace(self):
         screens.plan(self.ws, SYSTEM, "100", approval())
@@ -360,7 +373,7 @@ class MCPFlowTests(unittest.TestCase):
             self.assertFalse(tools[name]["annotations"]["destructiveHint"])
 
     def test_the_demo_system_has_no_screens_to_capture(self):
-        result = self.call("corelift_screen_plan", transactions=["ZDEMO_PR"], user_statement="yes")
+        result = self.call("corelift_screen_plan", transactions=["ZDEMO_PR"], programs={"ZDEMO_PR": "ZDEMO_PR_DIALOG"}, user_statement="yes")
         self.assertTrue(result["isError"])
         self.assertIn("demo", result["content"][0]["text"])
 

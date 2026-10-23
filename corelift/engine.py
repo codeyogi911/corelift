@@ -26,15 +26,11 @@ def digest(value):
                                      ensure_ascii=False).encode()).hexdigest()
 
 
-def scan_abap(text):
-    """Small lexical heuristic; never execute source, comments or embedded prompts.
-
-    Strings are preserved as spaces except static CALL FUNCTION operands. This
-    catches common exports, not ABAP grammar, dynamic calls, macros or SQL aliases.
-    """
-    findings = []
+def clean_abap(text):
+    """Uppercase source lines without comments; string literals become spaces
+    except a static CALL FUNCTION operand. Source is data: never executed."""
     clean_lines = []
-    for line_no, line in enumerate(text.splitlines(), 1):
+    for line in text.splitlines():
         if line.startswith("*"):
             clean_lines.append("")
             continue
@@ -63,8 +59,19 @@ def scan_abap(text):
             else:
                 clean.append(line[i])
                 i += 1
-        code = "".join(clean).upper()
-        clean_lines.append(code)
+        clean_lines.append("".join(clean).upper())
+    return clean_lines
+
+
+def scan_abap(text):
+    """Small lexical heuristic; never execute source, comments or embedded prompts.
+
+    Strings are preserved as spaces except static CALL FUNCTION operands. This
+    catches common exports, not ABAP grammar, dynamic calls, macros or SQL aliases.
+    """
+    findings = []
+    clean_lines = clean_abap(text)
+    for line_no, code in enumerate(clean_lines, 1):
         for kind, pattern in [
             ("read", r"\bFROM\s+([A-Z_][A-Z0-9_/]*)"),
             ("write", r"\b(?:UPDATE|MODIFY|INSERT(?:\s+INTO)?|DELETE(?:\s+FROM)?)\s+([A-Z_][A-Z0-9_/]*)"),

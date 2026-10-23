@@ -8,7 +8,7 @@ engine unknown. Source text is data: it is stored and scanned, never executed.
 """
 import re
 
-from ..engine import scan_abap
+from ..engine import clean_abap, scan_abap
 from .adt import SOURCE_TYPES, ADTError
 
 # Z/Y names are customer code. Namespaced /XYZ/ objects can be SAP's or the
@@ -113,7 +113,8 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
             deps[(target_obj, kind, op)] = {"object": target_obj, "kind": kind, "operation": op}
             if op in ("read", "write") and CUSTOMER.match(target_obj) and target_obj not in owned:
                 unresolved = True
-        for match in STATIC_CALL.finditer(_code_only(text)):
+        code = _code_only(text)
+        for match in STATIC_CALL.finditer(code):
             ref = match[1].upper()
             kind = "custom" if CUSTOMER.match(ref) else "api"
             unresolved = unresolved or (kind == "custom" and ref not in owned)
@@ -124,13 +125,13 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
         writes_standard = any(d["operation"] == "write" and not CUSTOMER.match(d["object"]) for d in dependencies)
         applications.append({
             "id": name, "title": (obj["description"] or name)[:1000], "role": "extension", "usage": "unknown",
-            "transaction_coupled": bool(COUPLING.search(_code_only(text))) or writes_standard,
+            "transaction_coupled": bool(COUPLING.search(code)) or writes_standard,
             "wrapper": False, "coverage_complete": not unresolved,
             "depends_on": depends_on, "datasets": datasets, "dependencies": dependencies, "abap": text})
-        found = program_screens(name, _code_only(text))
+        found = program_screens(name, code, has_selection_screen(text))
         screens += found
         if found:
-            screen_startup[name] = startup(_code_only(text), any(s["id"] == f"{name}_1000" for s in found))
+            screen_startup[name] = startup(text)
     if not applications:
         raise ADTError("no customer code found in scope; check packages/query and display authorizations")
     inventory = {
@@ -149,7 +150,7 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
     return inventory, sources, record
 
 
-def program_screens(name, code):
+def program_screens(name, code, selection_screen):
     """Dynpro screens one program calls, plus its selection screen 1000."""
     def unique(pattern, group=1):
         return sorted({m[group].upper() for m in pattern.finditer(code)})
@@ -161,85 +162,140 @@ def program_screens(name, code):
     screens = [{"id": f"{name}_{number}", "application_id": name, "technology": "Dynpro", **behavior}
                for number in sorted(set(SCREEN.findall(code)), key=int)]
     fields = unique(SELECTION)
-    if fields and not any(s["id"] == f"{name}_1000" for s in screens):
+    if selection_screen and not any(s["id"] == f"{name}_1000" for s in screens):
         screens.append({"id": f"{name}_1000", "application_id": name, "technology": "Dynpro", **behavior,
                         "pbo": [f"selection screen field {f}" for f in fields] + behavior["pbo"]})
     return screens
 
 
 # Statements that open a new processing block in a report or module pool.
-BLOCK = re.compile(r"^\s*(LOAD-OF-PROGRAM|INITIALIZATION|START-OF-SELECTION|END-OF-SELECTION|TOP-OF-PAGE(?:\s+DURING\s+LINE-SELECTION)?"
-                   r"|END-OF-PAGE|AT\s+SELECTION-SCREEN(?:\s+OUTPUT|\s+ON\s+[\w-]+(?:\s+[\w-]+)?)?|AT\s+LINE-SELECTION|AT\s+USER-COMMAND"
-                   r"|AT\s+PF\d+|FORM\s+[\w/]+|MODULE\s+\w+\s+(?:INPUT|OUTPUT)|CLASS\s+[\w/]+\s+(?:DEFINITION|IMPLEMENTATION)"
-                   r"|FUNCTION\s+[\w/]+)\b", re.I)
-BLOCK_END = re.compile(r"^\s*(ENDFORM|ENDMODULE|ENDCLASS|ENDFUNCTION)\b", re.I)
-PERFORM = re.compile(r"\bPERFORM\s+([\w/]+)", re.I)
-CHANGES = [(re.compile(r"\bCOMMIT\s+WORK\b", re.I), "COMMIT WORK"),
-           (re.compile(r"\bIN\s+UPDATE\s+TASK\b", re.I), "IN UPDATE TASK"),
-           (re.compile(r"\bCALL\s+TRANSACTION\s+'?([\w/]+)", re.I), "CALL TRANSACTION {}"),
-           (re.compile(r"\bSUBMIT\s+([\w/]+)", re.I), "SUBMIT {}")]
-CALLS = [(re.compile(r"\bCALL\s+FUNCTION\s+'([\w/]+)'", re.I), "CALL FUNCTION {}"),
-         (re.compile(r"\bCALL\s+METHOD\s+([\w/=>-]+)", re.I), "CALL METHOD {}"),
-         (re.compile(r"(?<![\w/])([\w/]+(?:=>|->)[\w/]+)\s*\(", re.I), "{}")]
+BLOCK = re.compile(r"(LOAD-OF-PROGRAM|INITIALIZATION|START-OF-SELECTION|END-OF-SELECTION|TOP-OF-PAGE(?: DURING LINE-SELECTION)?"
+                   r"|END-OF-PAGE|AT SELECTION-SCREEN(?: OUTPUT| ON .+)?|AT LINE-SELECTION|AT USER-COMMAND|AT PF\d+"
+                   r"|FORM ([\w/]+).*|MODULE (\w+) (?:INPUT|OUTPUT).*|CLASS [\w/]+ (?:DEFINITION|IMPLEMENTATION).*|FUNCTION [\w/]+.*)")
+BLOCK_END = re.compile(r"(ENDFORM|ENDMODULE|ENDCLASS|ENDFUNCTION)\b.*")
+OPENING = {"LOAD-OF-PROGRAM", "INITIALIZATION", "AT SELECTION-SCREEN OUTPUT"}
+WRITE = re.compile(r"(INSERT|UPDATE|MODIFY|DELETE)\s+(?:FROM\s+|INTO\s+)?(?:TABLE\s+)?(<?[\w/]+>?)")
+CHANGES = [(re.compile(r"\bCOMMIT\s+WORK\b"), "COMMIT WORK"),
+           (re.compile(r"\bIN\s+UPDATE\s+TASK\b"), "IN UPDATE TASK"),
+           (re.compile(r"\bCALL\s+TRANSACTION\b"), "CALL TRANSACTION"),
+           (re.compile(r"^SUBMIT\b"), "SUBMIT"),
+           (re.compile(r"\bEXPORT\b.*\bTO\s+DATABASE\b"), "EXPORT TO DATABASE"),
+           (re.compile(r"\bOPEN\s+DATASET\b.*\bFOR\s+(?:OUTPUT|APPENDING|UPDATE)\b"), "OPEN DATASET FOR OUTPUT"),
+           (re.compile(r"^DELETE\s+DATASET\b"), "DELETE DATASET")]
+# Code this scan cannot see into: the verdict is unclear, never display-only.
+OPAQUE = [(re.compile(r"\bCALL\s+FUNCTION\s+'([\w/]+)'"), "CALL FUNCTION {}"),
+          (re.compile(r"\bCALL\s+FUNCTION\s+(?!')"), "CALL FUNCTION (dynamic)"),
+          (re.compile(r"\bCALL\s+METHOD\s+([\w/=>()-]+)"), "CALL METHOD {}"),
+          (re.compile(r"([\w/]+\s*(?:=>|->)\s*[\w/]+)\s*\("), "{}"),
+          (re.compile(r"\bNEW\s+([\w/]+)\s*\("), "NEW {}"),
+          (re.compile(r"^CREATE\s+OBJECT\b"), "CREATE OBJECT"),
+          (re.compile(r"^INCLUDE\s+([\w/]+)"), "INCLUDE {}"),
+          (re.compile(r"^PERFORM\s+.*\bIN\s+PROGRAM\b"), "PERFORM IN PROGRAM"),
+          (re.compile(r"^PERFORM\s*\("), "PERFORM (dynamic)")]
 
 
-def _blocks(code):
-    """(block name, lines) in source order; code before any event is START-OF-SELECTION."""
-    blocks, name, lines = [], "START-OF-SELECTION", []
-    for line in code.splitlines():
-        start = BLOCK.match(line)
-        if start or BLOCK_END.match(line):
-            blocks.append((name, lines))
-            name = " ".join(start[1].upper().split()) if start else "START-OF-SELECTION"
-            lines = []
+def statements(text):
+    """ABAP statements from clean source, with chains (A: b, c.) expanded."""
+    found = []
+    for raw in " ".join(clean_abap(text)).split("."):
+        statement = " ".join(raw.split())
+        if ":" in statement:
+            head, rest = statement.split(":", 1)
+            found += [f"{head.strip()} {part.strip()}".strip() for part in rest.split(",")]
+        elif statement:
+            found.append(statement)
+    return found
+
+
+def has_selection_screen(text):
+    """PARAMETERS or SELECT-OPTIONS a user sees (NO-DISPLAY ones do not count)."""
+    return any(re.match(r"(PARAMETERS|SELECT-OPTIONS)\b", s) and "NO-DISPLAY" not in s for s in statements(text))
+
+
+def _blocks(stmts):
+    """(block name, statements) in order; code before any event is START-OF-SELECTION."""
+    blocks, name, body = [], "START-OF-SELECTION", []
+    for statement in stmts:
+        start = BLOCK.fullmatch(statement)
+        if start or BLOCK_END.fullmatch(statement):
+            blocks.append((name, body))
+            if not start:
+                name = "START-OF-SELECTION"
+            elif start[2]:
+                name = f"FORM {start[2]}"
+            elif start[3]:
+                name = f"MODULE {start[3]} {'OUTPUT' if ' OUTPUT' in statement else 'INPUT'}"
+            else:
+                name = start[1]
+            body = []
             continue
-        lines.append(line)
-    blocks.append((name, lines))
+        body.append(statement)
+    blocks.append((name, body))
     return blocks
 
 
-def startup(code, has_selection_screen):
+def startup(text):
     """What runs when a user opens this program's transaction, and what it may change.
 
     Opening runs LOAD-OF-PROGRAM, INITIALIZATION, AT SELECTION-SCREEN OUTPUT and
-    the PBO modules, plus the FORMs they PERFORM. A report without a selection
-    screen runs START-OF-SELECTION straight away. Verdict: display-only, unclear
-    (it calls code this scan cannot see into) or changes-data.
+    the PBO modules, plus the FORMs they PERFORM. A report without a visible
+    selection screen runs START-OF-SELECTION straight away. Verdict:
+    changes-data (a database write, commit, update task, file write or another
+    program started), unclear (calls or includes code this scan cannot see
+    into) or display-only. A transaction that skips its first screen or starts
+    with a variant runs more than this; the scan cannot know that.
     """
-    blocks = _blocks(code)
+    stmts = statements(text)
+    blocks = _blocks(stmts)
+    declared = {m[1] for s in stmts for m in [re.match(r"(?:DATA|STATICS|CONSTANTS|RANGES)\s+([\w/]+)", s)] if m}
+    declared |= {m for s in stmts for m in re.findall(r"\bDATA\(([\w/]+)\)", s)}
     forms = {}
-    for name, lines in blocks:
+    for name, body in blocks:
         if name.startswith("FORM "):
-            forms.setdefault(name, []).extend(lines)
-    opening = {"LOAD-OF-PROGRAM", "INITIALIZATION", "AT SELECTION-SCREEN OUTPUT"}
-    if not has_selection_screen:
-        opening.add("START-OF-SELECTION")
-    runs = [(n, l) for n, l in blocks if n in opening or (n.startswith("MODULE ") and n.endswith(" OUTPUT"))]
-    seen = {n for n, _ in runs}
+            forms.setdefault(name, []).extend(body)
+    opening = OPENING | (set() if has_selection_screen(text) else {"START-OF-SELECTION"})
+    runs = [(n, b) for n, b in blocks if n in opening or (n.startswith("MODULE ") and n.endswith(" OUTPUT"))]
+    names = {n for n, _ in runs}
+    opaque = set()
     queue = list(runs)
     while queue:
-        for form in PERFORM.findall("\n".join(queue.pop()[1])):
-            name = f"FORM {form.upper()}"
-            if name in forms and name not in seen:
-                seen.add(name)
-                runs.append((name, forms[name]))
-                queue.append((name, forms[name]))
-    text = "\n".join(line for _, lines in runs for line in lines)
-    changes = sorted({_statement(text, f["object"]) for f in scan_abap(text) if f["kind"] == "write"})
-    changes += sorted({label.format(m[1].upper()) if m.groups() else label for pattern, label in CHANGES for m in pattern.finditer(text)})
-    calls = sorted({label.format(m[1].upper()) for pattern, label in CALLS for m in pattern.finditer(text)
-                    if not m[1].upper().startswith(("ENQUEUE_", "DEQUEUE_"))})
-    verdict = "changes-data" if changes else "unclear" if calls else "display-only"
-    return {"runs_on_open": sorted({n for n, _ in runs if n != "START-OF-SELECTION" or not has_selection_screen}),
-            "effects": changes + calls, "verdict": verdict}
-
-
-def _statement(text, table):
-    """The verb that writes to a table, e.g. UPDATE ZDEMO_NOTES."""
-    match = re.search(rf"\b(INSERT|UPDATE|MODIFY|DELETE)\b[^.]*?\b{re.escape(table)}\b", text, re.I)
-    return f"{match[1].upper() if match else 'WRITE'} {table}"
+        for statement in queue.pop()[1]:
+            called = re.match(r"PERFORM\s+([\w/]+)", statement)
+            if not called or "IN PROGRAM" in statement:
+                continue
+            form = f"FORM {called[1]}"
+            if form not in forms:
+                opaque.add(f"PERFORM {called[1]} (not in this source)")
+            elif form not in names:
+                names.add(form)
+                runs.append((form, forms[form]))
+                queue.append((form, forms[form]))
+    changes = set()
+    for statement in (s for _, body in runs for s in body):
+        write = WRITE.match(statement)
+        if write and not write[2].startswith("<") and write[2] not in declared and "DATASET" not in statement:
+            changes.add(f"{write[1]} {write[2]}")
+        changes |= {label for pattern, label in CHANGES if pattern.search(statement)}
+        opaque |= {label.format(m[1]) if m.groups() else label for pattern, label in OPAQUE for m in [pattern.search(statement)] if m}
+    opaque = {o for o in opaque if not o.startswith(("CALL FUNCTION ENQUEUE_", "CALL FUNCTION DEQUEUE_"))}
+    verdict = "changes-data" if changes else "unclear" if opaque else "display-only"
+    return {"runs_on_open": sorted(names), "effects": sorted(changes) + sorted(opaque), "verdict": verdict}
 
 
 def _code_only(text):
-    # Drop full-line comments and trailing quote comments before regex hints.
-    return "\n".join("" if line.startswith("*") else line.split('"', 1)[0] for line in text.splitlines())
+    """Source without comments, string literals kept (authorization objects, messages)."""
+    return "\n".join(_strip_comment(line) for line in text.splitlines())
+
+
+def _strip_comment(line):
+    if line.startswith("*"):
+        return ""
+    quote = None
+    for i, char in enumerate(line):
+        if quote:
+            quote = None if char == quote else quote
+        elif char in "'`|":
+            quote = char
+        elif char == '"':
+            return line[:i]
+    return line

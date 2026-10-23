@@ -158,6 +158,32 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(init["effects"], ["CALL FUNCTION Z_DEMO_NOTIFY"])
         self.assertIn("FORM DEFAULTS", init["runs_on_open"])
 
+    def test_start_up_scan_errs_towards_not_display_only(self):
+        from corelift.sap.discover import startup
+        cases = {
+            "PROGRAM zp.\nINCLUDE zp_pbo.\nCALL SCREEN 100.\n": ("unclear", "INCLUDE ZP_PBO"),
+            "REPORT z.\nPERFORM: a, b.\nFORM a.\nENDFORM.\nFORM b.\n DELETE FROM zt WHERE x = 1.\nENDFORM.\n": ("changes-data", "DELETE ZT"),
+            "REPORT z.\nMODIFY: zt FROM ls_a, zt2 FROM ls_b.\n": ("changes-data", "MODIFY ZT2"),
+            "REPORT z.\nCALL FUNCTION lv_fm.\n": ("unclear", "CALL FUNCTION (dynamic)"),
+            "REPORT z.\nPERFORM save IN PROGRAM zother.\n": ("unclear", "PERFORM IN PROGRAM"),
+            "REPORT z.\nSUBMIT (lv) AND RETURN.\n": ("changes-data", "SUBMIT"),
+            "REPORT z.\nNEW zcl_x( )->save( ).\n": ("unclear", "NEW ZCL_X"),
+            "REPORT z.\nCREATE OBJECT go.\n": ("unclear", "CREATE OBJECT"),
+            "PROGRAM z.\nMODULE init OUTPUT. MODIFY zt FROM ls. ENDMODULE.\n": ("changes-data", "MODIFY ZT"),
+            "REPORT z.\nlv = '\"'. MODIFY zt FROM ls.\n": ("changes-data", "MODIFY ZT"),
+            "REPORT z.\nEXPORT a = b TO DATABASE indx(zz) ID 'X'.\n": ("changes-data", "EXPORT TO DATABASE"),
+            "REPORT z.\nOPEN DATASET lv FOR OUTPUT IN TEXT MODE.\n": ("changes-data", "OPEN DATASET FOR OUTPUT"),
+            "REPORT z.\nPARAMETERS p TYPE i NO-DISPLAY.\nUPDATE zt SET a = 1.\n": ("changes-data", "UPDATE ZT"),
+            "REPORT z.\nCALL FUNCTION 'Z_SAVE' IN UPDATE TASK.\n": ("changes-data", "IN UPDATE TASK"),
+            "PROGRAM z.\nDATA lt_x TYPE STANDARD TABLE OF zt.\nMODULE status_0100 OUTPUT.\n  MODIFY lt_x FROM ls INDEX 1.\nENDMODULE.\n": ("display-only", None),
+        }
+        for source, (verdict, effect) in cases.items():
+            with self.subTest(source=source):
+                result = startup(source)
+                self.assertEqual(result["verdict"], verdict)
+                if effect:
+                    self.assertIn(effect, result["effects"])
+
     def test_namespaced_sap_objects_are_apis_not_customer_code(self):
         from corelift.sap import discover as module
         with patch.object(mock, "OBJECTS", mock.OBJECTS + [("ZDEMO_EWM", "PROG/P", "/sap/bc/adt/programs/programs/zdemo_ewm", "EWM caller",

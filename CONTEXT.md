@@ -121,7 +121,7 @@ A screenshot of one transaction of the source system, taken in display mode with
 _Avoid_: screen capture (the step), mockup
 
 **Start-up verdict**:
-What opening a screen program's transaction does, judged from the code that runs on open: display-only, unclear (it calls code the scan cannot see into) or changes-data. Screens judged changes-data are described from source, never opened.
+What opening a screen program's transaction does, judged from the code that runs on open: display-only, unclear (it calls code the scan cannot see into) or changes-data. CoreLift gives no capture link for changes-data, and an unclear one only with the user's acceptance.
 _Avoid_: safe/unsafe, risk score
 
 **Target stack**:
