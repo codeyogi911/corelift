@@ -49,10 +49,24 @@ def plan(workspace, system_url, client, approval):
     outside = [t for t in approved if t not in in_scope]
     if outside:
         raise ContractError(f"not transactions of the lifted scope: {', '.join(outside)}")
+    programs = {str(t).upper(): str(p).upper() for t, p in (approval.get("programs") or {}).items()}
+    accepted = {str(p).upper() for p in approval.get("accept_unclear") or []}
+    judged = discovery.get("screen_startup", {})
     captures = []
     for transaction in approved:
+        program = programs.get(transaction)
+        if program not in judged:
+            raise ContractError(f"{transaction}: name the screen program it opens (one of {', '.join(sorted(judged)) or 'none'}) "
+                                "so its start-up code is judged before anything opens")
+        verdict, effects = judged[program]["verdict"], ", ".join(judged[program]["effects"])
+        if verdict == "changes-data":
+            raise ContractError(f"opening {transaction} runs {program}'s start-up code, which changes data "
+                                f"({effects}); describe its screen from the source instead")
+        if verdict == "unclear" and program not in accepted:
+            raise ContractError(f"opening {transaction} runs code this scan cannot see into ({effects}); "
+                                "show the user and list the program in accept_unclear only if they still approve")
         query = {"~transaction": transaction, **({"sap-client": client} if client else {})}
-        captures.append({"transaction": transaction, "folder": f"screens/{slug(transaction)}",
+        captures.append({"transaction": transaction, "program": program, "start_up": verdict, "folder": f"screens/{slug(transaction)}",
                          "url": f"{system_url.rstrip('/')}{WEB_GUI}?{urllib.parse.urlencode(query, safe='~')}"})
     value = {"approval": {**approval, "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds")},
              "captures": captures, "rules": RULES}

@@ -8,7 +8,8 @@
 - sap-screen-capture: only with the user's own approval naming the system and
   the transactions to open in display mode (approval {"system", "transactions",
   "statement"}); corelift/sap/screens.py binds it to the connected system and
-  the lifted scope.
+  the lifted scope, and refuses programs whose start-up code changes data or,
+  without the user's acceptance, cannot be judged.
 """
 
 ALLOWED = {"offline-assess", "network-evidence"}
