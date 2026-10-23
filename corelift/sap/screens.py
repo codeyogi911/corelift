@@ -49,10 +49,18 @@ def plan(workspace, system_url, client, approval):
     outside = [t for t in approved if t not in in_scope]
     if outside:
         raise ContractError(f"not transactions of the lifted scope: {', '.join(outside)}")
+    programs = {str(t).upper(): str(p).upper() for t, p in (approval.get("programs") or {}).items()}
+    judged = discovery.get("screen_startup", {})
     captures = []
     for transaction in approved:
+        program = programs.get(transaction)
+        if program in judged and judged[program]["verdict"] == "changes-data":
+            raise ContractError(f"opening {transaction} runs {program}'s start-up code, which changes data "
+                                f"({', '.join(judged[program]['effects'])}); describe its screen from the source instead")
         query = {"~transaction": transaction, **({"sap-client": client} if client else {})}
         captures.append({"transaction": transaction, "folder": f"screens/{slug(transaction)}",
+                         "start_up": judged[program]["verdict"] if program in judged
+                         else "unknown program; read its start-up code before opening",
                          "url": f"{system_url.rstrip('/')}{WEB_GUI}?{urllib.parse.urlencode(query, safe='~')}"})
     value = {"approval": {**approval, "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds")},
              "captures": captures, "rules": RULES}

@@ -134,7 +134,7 @@ def screen_plan(args):
         raise ContractError("the demo system has no SAP GUI for HTML; screenshots need a real system")
     _client()  # raises NotConnected with the next step
     approval = {"system": settings["url"], "transactions": list(args.get("transactions", [])),
-                "statement": str(args.get("user_statement", ""))}
+                "programs": dict(args.get("programs") or {}), "statement": str(args.get("user_statement", ""))}
     return screens.plan(_workspace(args), settings["url"], settings["client"], approval)
 
 
@@ -210,6 +210,8 @@ TOOLS = [
     ("corelift_plan", "Step 4: write migration/<APP>/BRIEF.md hand-offs for drafting target code.", WS, ["workspace"], LOCAL, plan),
     ("corelift_screen_plan", "After the user approves, get SAP GUI for HTML links to open the named transactions in display mode for reference screenshots.",
      {**WS, "transactions": {"type": "array", "items": {"type": "string"}, "description": "Transactions from discovery.json the user approved"},
+      "programs": {"type": "object", "additionalProperties": {"type": "string"},
+                   "description": "Transaction -> program it starts, as you matched it; transactions whose start-up changes data get no link"},
       "user_statement": {"type": "string", "description": "The user's own words approving the capture"}},
      ["workspace", "transactions", "user_statement"], LOCAL, screen_plan),
     ("corelift_record_screen", "File one reference screenshot of a planned transaction and the fields, actions and messages seen on it.",

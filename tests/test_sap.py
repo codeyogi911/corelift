@@ -131,6 +131,33 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(self.record["transactions"], [{"name": "ZDEMO_PR", "description": "Maintain purchase request notes"}])
         self.assertNotIn("ZDEMO_PR", [s["name"] for s in self.record["skipped"]])
 
+    def test_start_up_code_of_screen_programs_is_judged_before_capture(self):
+        startup = self.record["screen_startup"]
+        self.assertEqual(sorted(startup), ["ZDEMO_PO_REPORT", "ZDEMO_PR_DIALOG"])
+        dialog = startup["ZDEMO_PR_DIALOG"]
+        self.assertEqual(dialog["verdict"], "display-only")
+        self.assertIn("MODULE STATUS_0100 OUTPUT", dialog["runs_on_open"])
+        self.assertEqual(dialog["effects"], [])
+        self.assertEqual(startup["ZDEMO_PO_REPORT"]["verdict"], "display-only")
+
+    def test_opening_a_report_without_selection_screen_runs_it(self):
+        from corelift.sap import discover as module
+        extra = [("ZDEMO_AUTO", "PROG/P", "/sap/bc/adt/programs/programs/zdemo_auto", "Runs on open",
+                  "REPORT zdemo_auto.\nCALL SCREEN 100.\nUPDATE zdemo_notes SET text = 'x'.\nCOMMIT WORK.\n"),
+                 ("ZDEMO_INIT", "PROG/P", "/sap/bc/adt/programs/programs/zdemo_init", "Calls out on open",
+                  "REPORT zdemo_init.\nPARAMETERS p_a TYPE i.\nINITIALIZATION.\n  PERFORM defaults.\n"
+                  "START-OF-SELECTION.\n  DELETE FROM zdemo_notes.\nFORM defaults.\n  CALL FUNCTION 'Z_DEMO_NOTIFY'.\nENDFORM.\n")]
+        with patch.object(mock, "OBJECTS", mock.OBJECTS + extra):
+            _, _, record = module.discover(demo_client(), [mock.PACKAGE])
+        auto = record["screen_startup"]["ZDEMO_AUTO"]
+        self.assertEqual(auto["verdict"], "changes-data")
+        self.assertIn("UPDATE ZDEMO_NOTES", auto["effects"])
+        self.assertIn("COMMIT WORK", auto["effects"])
+        init = record["screen_startup"]["ZDEMO_INIT"]
+        self.assertEqual(init["verdict"], "unclear")
+        self.assertEqual(init["effects"], ["CALL FUNCTION Z_DEMO_NOTIFY"])
+        self.assertIn("FORM DEFAULTS", init["runs_on_open"])
+
     def test_namespaced_sap_objects_are_apis_not_customer_code(self):
         from corelift.sap import discover as module
         with patch.object(mock, "OBJECTS", mock.OBJECTS + [("ZDEMO_EWM", "PROG/P", "/sap/bc/adt/programs/programs/zdemo_ewm", "EWM caller",

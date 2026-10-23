@@ -120,6 +120,10 @@ _Avoid_: ticket, task, prompt
 A screenshot of one transaction of the source system, taken in display mode with the user's approval, that a target UI is reviewed against.
 _Avoid_: screen capture (the step), mockup
 
+**Start-up verdict**:
+What opening a screen program's transaction does, judged from the code that runs on open: display-only, unclear (it calls code the scan cannot see into) or changes-data. Screens judged changes-data are described from source, never opened.
+_Avoid_: safe/unsafe, risk score
+
 **Target stack**:
 Where an application's side-by-side code is drafted, described by a stack profile: SAP BTP with CAP by default, ABAP Cloud, AWS, Google Cloud, Azure or a customer's own. It never changes a disposition; an on-stack choice drafts side-by-side candidates as ABAP Cloud.
 _Avoid_: platform, cloud, target (the SAP release)

@@ -54,6 +54,16 @@ class ScreenCaptureTests(unittest.TestCase):
         saved = json.loads((self.ws / "screens/PLAN.json").read_text())
         self.assertEqual(saved["approval"]["statement"], "yes, capture ZDEMO_PR in display mode")
 
+    def test_programs_whose_start_up_changes_data_get_no_link(self):
+        discovery = json.loads((self.ws / "discovery.json").read_text())
+        discovery["screen_startup"]["ZDEMO_PR_DIALOG"] = {"verdict": "changes-data", "runs_on_open": [], "effects": ["COMMIT WORK"]}
+        (self.ws / "discovery.json").write_text(json.dumps(discovery))
+        with self.assertRaises(ContractError) as caught:
+            screens.plan(self.ws, SYSTEM, "100", {**approval(), "programs": {"ZDEMO_PR": "ZDEMO_PR_DIALOG"}})
+        self.assertIn("COMMIT WORK", str(caught.exception))
+        result = screens.plan(self.ws, SYSTEM, "100", approval())
+        self.assertEqual(result["captures"][0]["start_up"], "unknown program; read its start-up code before opening")
+
     def test_record_copies_a_real_image_into_the_workspace(self):
         screens.plan(self.ws, SYSTEM, "100", approval())
         image = Path(self.folder.name) / "shot.png"

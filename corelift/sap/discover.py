@@ -89,7 +89,7 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
             continue
         sources[obj["name"].upper()] = text[:MAX_ABAP]
     owned = set(sources) | set(tables)
-    applications, screens = [], []
+    applications, screens, screen_startup = [], [], {}
     seen = set()
     for obj in code:
         name = obj["name"].upper()
@@ -127,7 +127,10 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
             "transaction_coupled": bool(COUPLING.search(_code_only(text))) or writes_standard,
             "wrapper": False, "coverage_complete": not unresolved,
             "depends_on": depends_on, "datasets": datasets, "dependencies": dependencies, "abap": text})
-        screens += program_screens(name, _code_only(text))
+        found = program_screens(name, _code_only(text))
+        screens += found
+        if found:
+            screen_startup[name] = startup(_code_only(text), any(s["id"] == f"{name}_1000" for s in found))
     if not applications:
         raise ADTError("no customer code found in scope; check packages/query and display authorizations")
     inventory = {
@@ -138,7 +141,7 @@ def discover(client, packages=(), query=None, target=None, source_override=None,
                       "system_of_record": "source SAP system", "ownership": "extension"} for t in tables]}
     record = {"components": components, "packages": [p.upper() for p in packages], "query": query,
               "objects_in_scope": len(objects), "applications": len(applications), "tables": tables,
-              "transactions": transactions,
+              "transactions": transactions, "screen_startup": screen_startup,
               "skipped": skipped, "read_failures": failures,
               "limitations": ["Usage statistics (SCMON/SUSG), ATC results, screen layouts, flow logic and DDIC details are not read by this connector yet",
                               "Screen behavior (modules, authorization objects, messages, locks) is a program-wide lexical hint, not per-screen flow logic",
@@ -162,6 +165,79 @@ def program_screens(name, code):
         screens.append({"id": f"{name}_1000", "application_id": name, "technology": "Dynpro", **behavior,
                         "pbo": [f"selection screen field {f}" for f in fields] + behavior["pbo"]})
     return screens
+
+
+# Statements that open a new processing block in a report or module pool.
+BLOCK = re.compile(r"^\s*(LOAD-OF-PROGRAM|INITIALIZATION|START-OF-SELECTION|END-OF-SELECTION|TOP-OF-PAGE(?:\s+DURING\s+LINE-SELECTION)?"
+                   r"|END-OF-PAGE|AT\s+SELECTION-SCREEN(?:\s+OUTPUT|\s+ON\s+[\w-]+(?:\s+[\w-]+)?)?|AT\s+LINE-SELECTION|AT\s+USER-COMMAND"
+                   r"|AT\s+PF\d+|FORM\s+[\w/]+|MODULE\s+\w+\s+(?:INPUT|OUTPUT)|CLASS\s+[\w/]+\s+(?:DEFINITION|IMPLEMENTATION)"
+                   r"|FUNCTION\s+[\w/]+)\b", re.I)
+BLOCK_END = re.compile(r"^\s*(ENDFORM|ENDMODULE|ENDCLASS|ENDFUNCTION)\b", re.I)
+PERFORM = re.compile(r"\bPERFORM\s+([\w/]+)", re.I)
+CHANGES = [(re.compile(r"\bCOMMIT\s+WORK\b", re.I), "COMMIT WORK"),
+           (re.compile(r"\bIN\s+UPDATE\s+TASK\b", re.I), "IN UPDATE TASK"),
+           (re.compile(r"\bCALL\s+TRANSACTION\s+'?([\w/]+)", re.I), "CALL TRANSACTION {}"),
+           (re.compile(r"\bSUBMIT\s+([\w/]+)", re.I), "SUBMIT {}")]
+CALLS = [(re.compile(r"\bCALL\s+FUNCTION\s+'([\w/]+)'", re.I), "CALL FUNCTION {}"),
+         (re.compile(r"\bCALL\s+METHOD\s+([\w/=>-]+)", re.I), "CALL METHOD {}"),
+         (re.compile(r"(?<![\w/])([\w/]+(?:=>|->)[\w/]+)\s*\(", re.I), "{}")]
+
+
+def _blocks(code):
+    """(block name, lines) in source order; code before any event is START-OF-SELECTION."""
+    blocks, name, lines = [], "START-OF-SELECTION", []
+    for line in code.splitlines():
+        start = BLOCK.match(line)
+        if start or BLOCK_END.match(line):
+            blocks.append((name, lines))
+            name = " ".join(start[1].upper().split()) if start else "START-OF-SELECTION"
+            lines = []
+            continue
+        lines.append(line)
+    blocks.append((name, lines))
+    return blocks
+
+
+def startup(code, has_selection_screen):
+    """What runs when a user opens this program's transaction, and what it may change.
+
+    Opening runs LOAD-OF-PROGRAM, INITIALIZATION, AT SELECTION-SCREEN OUTPUT and
+    the PBO modules, plus the FORMs they PERFORM. A report without a selection
+    screen runs START-OF-SELECTION straight away. Verdict: display-only, unclear
+    (it calls code this scan cannot see into) or changes-data.
+    """
+    blocks = _blocks(code)
+    forms = {}
+    for name, lines in blocks:
+        if name.startswith("FORM "):
+            forms.setdefault(name, []).extend(lines)
+    opening = {"LOAD-OF-PROGRAM", "INITIALIZATION", "AT SELECTION-SCREEN OUTPUT"}
+    if not has_selection_screen:
+        opening.add("START-OF-SELECTION")
+    runs = [(n, l) for n, l in blocks if n in opening or (n.startswith("MODULE ") and n.endswith(" OUTPUT"))]
+    seen = {n for n, _ in runs}
+    queue = list(runs)
+    while queue:
+        for form in PERFORM.findall("\n".join(queue.pop()[1])):
+            name = f"FORM {form.upper()}"
+            if name in forms and name not in seen:
+                seen.add(name)
+                runs.append((name, forms[name]))
+                queue.append((name, forms[name]))
+    text = "\n".join(line for _, lines in runs for line in lines)
+    changes = sorted({_statement(text, f["object"]) for f in scan_abap(text) if f["kind"] == "write"})
+    changes += sorted({label.format(m[1].upper()) if m.groups() else label for pattern, label in CHANGES for m in pattern.finditer(text)})
+    calls = sorted({label.format(m[1].upper()) for pattern, label in CALLS for m in pattern.finditer(text)
+                    if not m[1].upper().startswith(("ENQUEUE_", "DEQUEUE_"))})
+    verdict = "changes-data" if changes else "unclear" if calls else "display-only"
+    return {"runs_on_open": sorted({n for n, _ in runs if n != "START-OF-SELECTION" or not has_selection_screen}),
+            "effects": changes + calls, "verdict": verdict}
+
+
+def _statement(text, table):
+    """The verb that writes to a table, e.g. UPDATE ZDEMO_NOTES."""
+    match = re.search(rf"\b(INSERT|UPDATE|MODIFY|DELETE)\b[^.]*?\b{re.escape(table)}\b", text, re.I)
+    return f"{match[1].upper() if match else 'WRITE'} {table}"
 
 
 def _code_only(text):

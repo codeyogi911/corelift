@@ -13,6 +13,8 @@ Add one capability, `sap-screen-capture`, outside the ADT allowlist. With an app
 ## Consequences
 
 - SAP access is no longer purely read-only by construction. Opening a transaction runs its start-up (PBO) logic, and nothing in CoreLift can stop a browser from pressing Save or Execute. Display-only is policy in the plan's rules and the skill, not enforcement. CoreLift limits only which links it hands out.
+- Discovery judges each screen program's start-up code (LOAD-OF-PROGRAM, INITIALIZATION, AT SELECTION-SCREEN OUTPUT, PBO modules, the FORMs they call, and START-OF-SELECTION for a report without a selection screen) as display-only, unclear or changes-data. The agent captures only screens whose layout the source leaves unclear, resolves unclear ones by reading the called code, and `corelift/sap/screens.py` refuses a link for a program judged changes-data. The scan is lexical: dynamic calls and code behind called function modules are not followed.
+- Accepted by Shashwat on 2026-10-23.
 - The skill asks for the approval once, names the transactions, and recommends a development or QA system. Users who refuse lose only the screenshots; the lift, assessment and loop work without them.
 - The ledger and approval are local bookkeeping: CoreLift cannot prove the statement came from the user.
 - Rejected: reading Dynpro layouts over RFC (`RPY_DYNPRO_READ`) needs an open RFC pathway CoreLift does not use; rendering screens from source alone would guess at layouts; a CoreLift-owned headless browser would need a new dependency and still run the same start-up logic.
