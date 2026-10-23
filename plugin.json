@@ -24,8 +24,24 @@
       "interface": {
         "displayName": "CoreLift",
         "shortDescription": "Lift and shift SAP custom code to clean core",
+        "longDescription": "CoreLift reads your custom ABAP code from your SAP system (read-only), checks every SAP dependency against SAP's published Cloudification Repository, recommends where each app should go and drafts its target code in a local folder for your review. Nothing is written to SAP or BTP. No SAP system yet? Try the built-in fictional demo system first.",
         "developerName": "Shashwat Jain",
-        "category": "Coding"
+        "category": "Coding",
+        "capabilities": [
+          "Connect your SAP system read-only",
+          "Assess custom code for clean core",
+          "Draft target code for review"
+        ],
+        "websiteURL": "https://github.com/codeyogi911/corelift",
+        "supportURL": "https://github.com/codeyogi911/corelift/issues",
+        "defaultPrompt": [
+          "Lift and shift my SAP custom code using the demo system",
+          "Connect CoreLift to my SAP system",
+          "Lift and shift my SAP custom code"
+        ],
+        "brandColor": "#1D4ED8",
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/composer-icon.png"
       }
     }
   }
