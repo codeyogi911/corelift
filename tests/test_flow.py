@@ -194,8 +194,9 @@ class TargetStackTests(unittest.TestCase):
         self.assertIn("sap-btp-cap", str(caught.exception))
 
     def test_briefs_follow_the_chosen_stack(self):
-        brief = (self.ws / "migration/ZCL_DEMO_NOTES/BRIEF.md").read_text()
+        brief = (self.ws / "migration/ZDEMO_PO_REPORT/BRIEF.md").read_text()
         self.assertIn("Target stack: SAP BTP with CAP", brief)
+        self.assertIn("on SAP BTP with CAP following `../../target-stack.md`", brief)
         stacks.choose(self.ws, "aws")
         self.assertIn("name: AWS", (self.ws / "target-stack.md").read_text())
         assessment = json.loads((self.ws / "assessment.json").read_text())
@@ -207,6 +208,16 @@ class TargetStackTests(unittest.TestCase):
         brief = (self.ws / "migration/ZCL_DEMO_NOTES/BRIEF.md").read_text()
         self.assertTrue(brief.startswith("# ZCL_DEMO_NOTES: Side-by-side extension on AWS"))
         self.assertIn("`../../target-stack.md`", brief)
+
+    def test_on_stack_apps_say_the_chosen_stack_does_not_apply(self):
+        stacks.choose(self.ws, "aws")
+        pipeline.plan(self.ws)
+        brief = (self.ws / "migration/ZCL_DEMO_NOTES/BRIEF.md").read_text()
+        self.assertNotIn("Target stack:", brief)
+        self.assertIn("Target: on-stack ABAP Cloud on S/4HANA. The chosen stack (AWS) is for side-by-side work and does not apply here.", brief)
+        index = {entry["application"]: entry for entry in json.loads((self.ws / "migration/INDEX.json").read_text())}
+        self.assertFalse(index["ZCL_DEMO_NOTES"]["follows_stack"])
+        self.assertTrue(index["ZDEMO_PO_REPORT"]["follows_stack"])
 
     def test_an_on_stack_choice_keeps_side_by_side_candidates_in_abap_cloud(self):
         stacks.choose(self.ws, "abap-cloud")
