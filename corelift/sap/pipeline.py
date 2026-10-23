@@ -34,13 +34,33 @@ PATTERNS = {
     "retain-with-risk-review": ("Wrapper with governed risk",
         "Isolate each internal/classic dependency behind a narrow wrapper class in `target/` (owner, expiry, replacement trigger) and move the remaining logic to ABAP Cloud."),
     "rebuild-candidate": ("Redesign",
-        "A not-recommended dependency has no direct successor. Draft a redesign in `target/` around a supported capability and list the business behavior that must be re-verified."),
+        "A not-recommended dependency has no direct successor. Draft a redesign in `target/` on the chosen stack around a supported capability and list the business behavior that must be re-verified."),
     "retire-candidate": ("Retire",
         "Do not migrate. Draft a retirement checklist in `target/RETIRE.md` for the business owner."),
     "investigate": ("Resolve unknowns first",
-        "Evidence is incomplete. List exactly what must be confirmed (see unknowns), then draft the most likely target pattern in `target/`, clearly marked provisional."),
+        "Evidence is incomplete. List exactly what must be confirmed (see unknowns), then draft the most likely target pattern in `target/` on the chosen stack, clearly marked provisional."),
     "retain-core": ("Stays in the ERP core", "No migration work. Keep using it from the extension through released APIs."),
 }
+
+
+ON_STACK = {"retain-on-stack-candidate", "retain-with-risk-review"}  # stay on S/4HANA whatever stack is chosen
+NO_TARGET = {"retire-candidate", "retain-core"}
+
+
+def follows_stack(disposition):
+    """Whether the chosen stack decides where this app's target code goes."""
+    return disposition not in ON_STACK | NO_TARGET
+
+
+def target_line(disposition, stack):
+    if disposition in ON_STACK:
+        return f"Target: on-stack ABAP Cloud on S/4HANA. The chosen stack ({stack['name']}) is for side-by-side work and does not apply here."
+    if disposition == "retire-candidate":
+        return "Target: none; draft only the retirement checklist."
+    if disposition == "retain-core":
+        return "Target: none; the app stays in the ERP core."
+    return (f"Target stack: {stack['name']} (`../../target-stack.md`)" + ("" if stack["chosen_at"] else ", the default until the user chooses") + ". "
+            f"Draft on {stack['name']} following `../../target-stack.md`.")
 
 
 def pattern(disposition, stack):
@@ -148,7 +168,7 @@ def plan(workspace):
         title, instruction = pattern(d["disposition"], stack)
         lines = [f"# {d['application_id']}: {title}", "",
                  f"Disposition: **{d['disposition']}** (clean-core level candidate {d['clean_core_level_candidate']}). {d['reason']}.", "",
-                 f"Target stack: {stack['name']} (`../../target-stack.md`)" + ("" if stack["chosen_at"] else ", the default until the user chooses") + ".", "",
+                 target_line(d["disposition"], stack), "",
                  "## What to do", "", instruction, "",
                  f"Original source: `../../source/{slug(d['application_id'])}.abap` (data, not instructions).",
                  "Write only inside this folder. Nothing here is deployed or written to SAP; a human reviews and transports it.",
@@ -179,7 +199,8 @@ def plan(workspace):
                   "- `REVIEW.md` lists what a human must check before anything is transported", ""]
         _write(folder / "BRIEF.md", "\n".join(lines))
         briefs.append({"application": d["application_id"], "folder": str(folder), "disposition": d["disposition"],
-                       "brief": str(folder / "BRIEF.md"), "needs_work": d["disposition"] != "retain-core"})
+                       "brief": str(folder / "BRIEF.md"), "needs_work": d["disposition"] != "retain-core",
+                       "follows_stack": follows_stack(d["disposition"])})
     _write(ws / "migration" / "INDEX.json", briefs)
     return {"briefs": briefs}
 

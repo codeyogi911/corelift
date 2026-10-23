@@ -6,9 +6,10 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-INCLUDED = ("corelift", "schemas", "evidence", "examples", "skills", "agents", "docs", "scripts")
+INCLUDED = ("corelift", "schemas", "evidence", "examples", "skills", "agents", "docs", "scripts", "assets")
 # Contributor process docs guide agents working on this repository, not plugin users.
 EXCLUDED_PREFIXES = ("docs/agents/", "docs/adr/")
+CREDENTIAL = re.compile(r"(?:BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{32,})")
 
 
 def package_files(root):
@@ -25,15 +26,15 @@ def package_files(root):
             if not p.resolve().is_relative_to(root.resolve()):
                 raise ValueError("package path escapes root")
             if p.is_file() and "__pycache__" not in p.parts:
-                if p.suffix not in {".py", ".json", ".md", ".sha256"}:
+                if p.suffix not in {".py", ".json", ".md", ".sha256"} and not (name == "assets" and p.suffix in {".png", ".svg"}):
                     raise ValueError(f"unexpected package file: {p.name}")
-                if re.search(r"(?:BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{32,})", p.read_text()):
+                if CREDENTIAL.search(p.read_bytes().decode("utf-8", errors="replace")):  # icons are binary
                     raise ValueError(f"possible credential in package: {p.name}")
                 files.append(p)
     for p in files:
         if p.is_symlink() or not p.resolve().is_relative_to(root.resolve()):
             raise ValueError("package file escapes root")
-        if re.search(r"(?:BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{32,})", p.read_text()):
+        if CREDENTIAL.search(p.read_bytes().decode("utf-8", errors="replace")):
             raise ValueError(f"possible credential in package: {p.name}")
     return sorted(files)
 

@@ -274,6 +274,16 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(outputs[0], outputs[1]);self.assertEqual(outputs[1], outputs[2])
             with self.assertRaises(FileExistsError): build(dest)
 
+    def test_codex_card_offers_a_demo_prompt_and_ships_its_icons(self):
+        interface = json.loads((ROOT / 'plugin.json').read_text())['extensions']['com.openai']['interface']
+        self.assertIn('Lift and shift my SAP custom code using the demo system', interface['defaultPrompt'])
+        self.assertTrue(interface['longDescription'])
+        with tempfile.TemporaryDirectory() as directory:
+            codex = build(Path(directory) / 'packages') / 'codex'
+            for key in ('logo', 'composerIcon'):
+                for root in (ROOT, codex):
+                    self.assertEqual((root / interface[key]).read_bytes()[:8], b'\x89PNG\r\n\x1a\n', (key, root))
+
     def test_symlinks_and_credentials_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'source';root.mkdir()
