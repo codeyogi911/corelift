@@ -24,7 +24,7 @@ Its onboarding skill walks the user through connecting. To pick up a newer `main
 
 ## Try it on the demo system
 
-In an empty project folder, start `codex` (or Claude Code) and ask: "lift and shift my SAP custom code using the demo system". The agent switches the session to the fictional demo system, lifts package `ZDEMO_PURCHASING` into `corelift-workspace/`, shows a table of four applications and drafts target code with a `REVIEW.md` per application. `codex exec` runs the same prompt non-interactively.
+Open an empty project folder in the Codex app or the Codex CLI (`codex`), or in Claude Code, and ask (the plugin manifest also offers this as a starter prompt; whether the Codex app shows it has not been checked): "lift and shift my SAP custom code using the demo system". The agent switches the session to the fictional demo system, lifts package `ZDEMO_PURCHASING` into `corelift-workspace/`, shows a table of four applications and asks once where side-by-side code should go and which apps to shift (reply "go" to accept the defaults), then drafts target code checkpoint by checkpoint. `codex exec` runs the same prompt non-interactively.
 
 ## Connect
 
